@@ -47,14 +47,14 @@ const STATUS_COLORS = {
 
 const getStatusLabel = (status) => {
     const labels = {
-        0: "Draft", 1: "InReview", 2: "Approved", 3: "Rejected", 4: "Archived",
+        0: "Draft", 1: "In Review", 2: "Approved", 3: "Rejected", 4: "Archived",
         Draft: "Draft", InReview: "In Review", Approved: "Approved",
         Rejected: "Rejected", Archived: "Archived",
     };
     return labels[status] || String(status);
 };
 
-const EMPTY_FORM = { title: "", description: "", type: "", status: "Pending" };
+const EMPTY_FORM = { title: "", description: "", type: "", status: "Draft" };
 
 export default function Documents() {
     const qc = useQueryClient();
@@ -270,7 +270,7 @@ export default function Documents() {
                         </div>
                         <div>
                             <p style={s.fieldLabel}>Status</p>
-                            <p style={{ margin: 0, fontSize: 14, color: "#c6d4df" }}>{selected.status}</p>
+                            <p style={{ margin: 0, fontSize: 14, color: "#c6d4df" }}>{getStatusLabel(selected.status)}</p>
                         </div>
                         <div>
                             <p style={s.fieldLabel}>Description</p>
@@ -295,9 +295,7 @@ export default function Documents() {
                             </button>
                         </div>
 
-                        {/* File section */}
-                        <div style={s.fileSection}>
-                            <p style={s.fieldLabel}>ATTACHED FILE</p>
+                        
                         <div style={s.fileSection}>
                             <p style={s.fieldLabel}>ATTACHED FILE</p>
                             {selected.fileUrl ? (
