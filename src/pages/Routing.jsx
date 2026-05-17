@@ -101,8 +101,8 @@ export default function Routing() {
     };
 
     // get current user id from store
-    const currentUserId = user?.id || user?.Id || user?.sub;
-
+    const currentUserId = user?.id || user?.nameid || user?.["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"];
+        
     const isRecipient = (ev) => {
         return ev.toUserId && currentUserId &&
             ev.toUserId.toString().toLowerCase() === currentUserId.toString().toLowerCase();
