@@ -4,6 +4,8 @@ import { AppLayout } from "../components/Sidebar";
 import client from "../api/client";
 import useWindowWidth from "../hooks/useWindowWidth";
 
+
+const triggerWorkflow = (id) => client.post("/workflow/trigger/" + id).then((r) => r.data);
 const fetchDocs = () => client.get("/Documents").then((r) => r.data);
 const createDoc = (body) => client.post("/Documents", body).then((r) => r.data);
 const patchStatus = ({ id, status }) =>
@@ -74,7 +76,11 @@ export default function Documents() {
         queryKey: ["documents"],
         queryFn: fetchDocs,
     });
-
+    const trigger = useMutation({
+        mutationFn: triggerWorkflow,
+        onSuccess: () => { qc.invalidateQueries(["documents"]); setModal(null); },
+        onError: (err) => alert(err.response?.data?.error || err.response?.data?.message || "No matching workflow rule found"),
+    });
     const create = useMutation({
         mutationFn: createDoc,
         onSuccess: () => { qc.invalidateQueries(["documents"]); setModal(null); setForm(EMPTY_FORM); },
@@ -274,7 +280,24 @@ export default function Documents() {
                             <p style={s.fieldLabel}>Created</p>
                             <p style={{ margin: 0, fontSize: 14, color: "#c6d4df" }}>{selected.createdAt ? new Date(selected.createdAt).toLocaleString() : "n/a"}</p>
                         </div>
+                        {/* Workflow trigger */}
+                        <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 14, marginTop: 4 }}>
+                            <p style={s.fieldLabel}>WORKFLOW</p>
+                            <p style={{ margin: "4px 0 8px", fontSize: 12, color: "#8f98a0" }}>
+                                Automatically route this document based on workflow rules.
+                            </p>
+                            <button
+                                style={{ ...s.primaryBtn, fontSize: 12, padding: "6px 14px" }}
+                                disabled={trigger.isPending}
+                                onClick={() => trigger.mutate(selected.id)}
+                            >
+                                {trigger.isPending ? "Triggering..." : "Trigger Workflow"}
+                            </button>
+                        </div>
 
+                        {/* File section */}
+                        <div style={s.fileSection}>
+                            <p style={s.fieldLabel}>ATTACHED FILE</p>
                         <div style={s.fileSection}>
                             <p style={s.fieldLabel}>ATTACHED FILE</p>
                             {selected.fileUrl ? (
