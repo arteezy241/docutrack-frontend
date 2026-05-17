@@ -6,7 +6,7 @@ import useWindowWidth from '../hooks/useWindowWidth';
 
 const statusMap = {
     0: { label: 'Draft', color: '#8f98a0', bg: '#2a3f5f' },
-    1: { label: 'Under Review', color: '#f59e0b', bg: '#3d2e00' },
+    1: { label: 'In Review', color: '#f59e0b', bg: '#3d2e00' },
     2: { label: 'Approved', color: '#4ade80', bg: '#003d2e' },
     3: { label: 'Rejected', color: '#c94040', bg: '#3d0000' },
     4: { label: 'Archived', color: '#6b7280', bg: '#2a2a2a' },

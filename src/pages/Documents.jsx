@@ -6,7 +6,10 @@ import useWindowWidth from "../hooks/useWindowWidth";
 
 const fetchDocs = () => client.get("/Documents").then((r) => r.data);
 const createDoc = (body) => client.post("/Documents", body).then((r) => r.data);
-const patchStatus = ({ id, status }) => client.patch("/Documents/" + id + "/status", { status }).then((r) => r.data);
+const patchStatus = ({ id, status }) =>
+    client.patch("/Documents/" + id + "/status", {
+        status: STATUS_MAP[status] ?? status
+    }).then((r) => r.data);
 const deleteDoc = (id) => client.delete("/Documents/" + id).then((r) => r.data);
 const deleteFile = (id) => client.delete("/Documents/" + id + "/file").then((r) => r.data);
 const uploadFile = ({ id, file }) => {
@@ -17,13 +20,36 @@ const uploadFile = ({ id, file }) => {
     }).then((r) => r.data);
 };
 
-const STATUS_OPTIONS = ["Pending", "InProgress", "Approved", "Rejected", "Completed"];
+const STATUS_OPTIONS = ["Draft", "InReview", "Approved", "Rejected", "Archived"];
+
+const STATUS_MAP = {
+    "Draft": 0,
+    "InReview": 1,
+    "Approved": 2,
+    "Rejected": 3,
+    "Archived": 4,
+};
+
 const STATUS_COLORS = {
-    Pending: { bg: "rgba(245,158,11,0.15)", color: "#f59e0b" },
-    InProgress: { bg: "rgba(71,191,255,0.12)", color: "#47bfff" },
+    Draft: { bg: "rgba(255,255,255,0.06)", color: "#8f98a0" },
+    InReview: { bg: "rgba(245,158,11,0.15)", color: "#f59e0b" },
     Approved: { bg: "rgba(74,222,128,0.12)", color: "#4ade80" },
     Rejected: { bg: "rgba(201,64,64,0.12)", color: "#c94040" },
-    Completed: { bg: "rgba(79,70,229,0.15)", color: "#818cf8" },
+    Archived: { bg: "rgba(79,70,229,0.15)", color: "#818cf8" },
+    0: { bg: "rgba(255,255,255,0.06)", color: "#8f98a0" },
+    1: { bg: "rgba(245,158,11,0.15)", color: "#f59e0b" },
+    2: { bg: "rgba(74,222,128,0.12)", color: "#4ade80" },
+    3: { bg: "rgba(201,64,64,0.12)", color: "#c94040" },
+    4: { bg: "rgba(79,70,229,0.15)", color: "#818cf8" },
+};
+
+const getStatusLabel = (status) => {
+    const labels = {
+        0: "Draft", 1: "InReview", 2: "Approved", 3: "Rejected", 4: "Archived",
+        Draft: "Draft", InReview: "In Review", Approved: "Approved",
+        Rejected: "Rejected", Archived: "Archived",
+    };
+    return labels[status] || String(status);
 };
 
 const EMPTY_FORM = { title: "", description: "", type: "", status: "Pending" };
@@ -153,7 +179,7 @@ export default function Documents() {
                                 </thead>
                                 <tbody>
                                     {paginated.map((doc) => {
-                                        const sc = STATUS_COLORS[doc.status] || STATUS_COLORS.Pending;
+                                        const sc = STATUS_COLORS[doc.status] ?? STATUS_COLORS[0];
                                         return (
                                             <tr
                                                 key={doc.id}
@@ -169,7 +195,9 @@ export default function Documents() {
                                                 </td>
                                                 <td style={s.td}><span style={s.typePill}>{doc.type || "n/a"}</span></td>
                                                 <td style={s.td}>
-                                                    <span style={{ ...s.statusPill, background: sc.bg, color: sc.color }}>{doc.status}</span>
+                                                    <span style={{ ...s.statusPill, background: sc.bg, color: sc.color }}>
+                                                        {getStatusLabel(doc.status)}
+                                                    </span>
                                                 </td>
                                                 <td style={s.td}>
                                                     {doc.fileUrl ? (
