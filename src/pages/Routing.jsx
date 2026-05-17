@@ -186,7 +186,9 @@ export default function Routing() {
                                 <option value="">Select a user...</option>
                                 {users.map((u) => (
                                     <option key={u.id} value={u.id}>
-                                        {(u.firstName + " " + u.lastName).trim() || u.email} — {u.email}
+                                        {u.firstName && u.lastName
+                                            ? (u.firstName + " " + u.lastName).trim()
+                                            : u.fullName || u.email || "Unknown"}
                                     </option>
                                 ))}
                             </select>
