@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "../components/Sidebar";
 import client from "../api/client";
+import useAuthStore from "../store/authStore";
 import useWindowWidth from "../hooks/useWindowWidth";
 
 const fetchDocuments = () => client.get("/Documents").then((r) => r.data);
@@ -9,6 +10,10 @@ const fetchUsers = () => client.get("/Users").then((r) => r.data);
 const fetchRouting = (docId) => client.get("/Documents/" + docId + "/routing").then((r) => r.data);
 const createRoute = ({ documentId, ...body }) =>
     client.post("/Documents/" + documentId + "/routing", body).then((r) => r.data);
+const approveRoute = ({ documentId, eventId }) =>
+    client.patch("/Documents/" + documentId + "/routing/" + eventId + "/approve").then((r) => r.data);
+const rejectRoute = ({ documentId, eventId, reason }) =>
+    client.patch("/Documents/" + documentId + "/routing/" + eventId + "/reject", { reason }).then((r) => r.data);
 
 const STATUS_COLORS = {
     0: { bg: "rgba(255,255,255,0.06)", color: "#8f98a0" },
@@ -18,16 +23,27 @@ const STATUS_COLORS = {
     Pending: { bg: "rgba(245,158,11,0.15)", color: "#f59e0b" },
     InProgress: { bg: "rgba(71,191,255,0.12)", color: "#47bfff" },
     Completed: { bg: "rgba(74,222,128,0.12)", color: "#4ade80" },
+    Approved: { bg: "rgba(74,222,128,0.12)", color: "#4ade80" },
     Rejected: { bg: "rgba(201,64,64,0.12)", color: "#c94040" },
 };
+
+const STATUS_LABELS = {
+    0: "Draft", 1: "Under Review", 2: "Approved", 3: "Rejected", 4: "Archived",
+    Pending: "Pending", InProgress: "In Progress", Completed: "Completed",
+    Approved: "Approved", Rejected: "Rejected",
+};
+
 const EMPTY = { documentId: "", toUserId: "", notes: "" };
 
 export default function Routing() {
     const qc = useQueryClient();
+    const { user } = useAuthStore();
     const width = useWindowWidth();
     const isMobile = width < 768;
 
     const [modal, setModal] = useState(false);
+    const [rejectModal, setRejectModal] = useState(null);
+    const [rejectReason, setRejectReason] = useState("");
     const [form, setForm] = useState(EMPTY);
     const [search, setSearch] = useState("");
     const [selDocId, setSelDocId] = useState(null);
@@ -45,9 +61,28 @@ export default function Routing() {
         mutationFn: createRoute,
         onSuccess: () => {
             qc.invalidateQueries(["routing", form.documentId]);
+            qc.invalidateQueries(["documents"]);
             setModal(false);
             setSelDocId(form.documentId);
             setForm(EMPTY);
+        },
+    });
+
+    const approve = useMutation({
+        mutationFn: approveRoute,
+        onSuccess: () => {
+            qc.invalidateQueries(["routing", selDocId]);
+            qc.invalidateQueries(["documents"]);
+        },
+    });
+
+    const reject = useMutation({
+        mutationFn: rejectRoute,
+        onSuccess: () => {
+            qc.invalidateQueries(["routing", selDocId]);
+            qc.invalidateQueries(["documents"]);
+            setRejectModal(null);
+            setRejectReason("");
         },
     });
 
@@ -59,11 +94,25 @@ export default function Routing() {
 
     const userName = (id) => {
         const u = users.find((u) => u.id === id);
-        if (!u) return id;
+        if (!u) return "Unknown";
         if (u.firstName || u.lastName) return (u.firstName + " " + u.lastName).trim();
         if (u.fullName) return u.fullName;
-        if (u.email) return u.email;
-        return "Unknown";
+        return u.email || "Unknown";
+    };
+
+    // get current user id from store
+    const currentUserId = user?.id || user?.Id || user?.sub;
+
+    const isRecipient = (ev) => {
+        return ev.toUserId && currentUserId &&
+            ev.toUserId.toString().toLowerCase() === currentUserId.toString().toLowerCase();
+    };
+
+    const canActOn = (ev) => {
+        const status = ev.statusAfter ?? ev.status;
+        const alreadyActed = status === "Approved" || status === "Rejected" ||
+            status === 2 || status === 3;
+        return isRecipient(ev) && !alreadyActed;
     };
 
     return (
@@ -129,14 +178,16 @@ export default function Routing() {
                                 <table style={s.table}>
                                     <thead>
                                         <tr>
-                                            {["Routed To", "Notes", "Status", "Date"].map((h) => (
+                                            {["Routed To", "Note", "Status", "Date", "Action"].map((h) => (
                                                 <th key={h} style={s.th}>{h}</th>
                                             ))}
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {events.map((ev) => {
-                                            const sc = STATUS_COLORS[ev.status] || STATUS_COLORS.Pending;
+                                            const status = ev.statusAfter ?? ev.status;
+                                            const sc = STATUS_COLORS[status] || STATUS_COLORS.Pending;
+                                            const label = STATUS_LABELS[status] || String(status);
                                             return (
                                                 <tr
                                                     key={ev.id}
@@ -152,14 +203,39 @@ export default function Routing() {
                                                             <span style={{ whiteSpace: "nowrap" }}>{userName(ev.toUserId)}</span>
                                                         </div>
                                                     </td>
-                                                    <td style={{ ...s.td, color: "#8f98a0", fontSize: 12 }}>{ev.notes || "—"}</td>
+                                                    <td style={{ ...s.td, color: "#8f98a0", fontSize: 12 }}>
+                                                        {ev.note || ev.notes || "—"}
+                                                    </td>
                                                     <td style={s.td}>
-                                                        <span style={{ ...s.pill, background: sc.bg, color: sc.color }}>
-                                                            {ev.statusAfter || ev.status || "Pending"}
+                                                        <span style={{ ...s.pill, background: sc.bg, color: sc.color, whiteSpace: "nowrap" }}>
+                                                            {label}
                                                         </span>
                                                     </td>
                                                     <td style={{ ...s.td, color: "#8f98a0", fontSize: 12, whiteSpace: "nowrap" }}>
-                                                        {ev.timestamp || ev.createdAt ? new Date(ev.timestamp || ev.createdAt).toLocaleDateString() : "—"}
+                                                        {ev.timestamp || ev.createdAt
+                                                            ? new Date(ev.timestamp || ev.createdAt).toLocaleDateString()
+                                                            : "—"}
+                                                    </td>
+                                                    <td style={{ ...s.td, whiteSpace: "nowrap" }}>
+                                                        {canActOn(ev) ? (
+                                                            <div style={{ display: "flex", gap: 6 }}>
+                                                                <button
+                                                                    style={{ ...s.approveBtn }}
+                                                                    disabled={approve.isPending}
+                                                                    onClick={() => approve.mutate({ documentId: selDocId, eventId: ev.id })}
+                                                                >
+                                                                    Approve
+                                                                </button>
+                                                                <button
+                                                                    style={{ ...s.rejectBtn }}
+                                                                    onClick={() => { setRejectModal(ev); setRejectReason(""); }}
+                                                                >
+                                                                    Reject
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <span style={{ color: "#8f98a0", fontSize: 12 }}>—</span>
+                                                        )}
                                                     </td>
                                                 </tr>
                                             );
@@ -172,6 +248,7 @@ export default function Routing() {
                 )}
             </div>
 
+            {/* Route modal */}
             {modal && (
                 <Modal title="Route Document" onClose={() => { setModal(false); setForm(EMPTY); }} isMobile={isMobile}>
                     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -188,7 +265,7 @@ export default function Routing() {
                                     <option key={u.id} value={u.id}>
                                         {u.firstName && u.lastName
                                             ? (u.firstName + " " + u.lastName).trim()
-                                            : u.fullName || u.email || "Unknown"}
+                                            : u.fullName || u.email}
                                     </option>
                                 ))}
                             </select>
@@ -209,6 +286,32 @@ export default function Routing() {
                                 onClick={() => create.mutate(form)}
                             >
                                 {create.isPending ? "Routing..." : "Route"}
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
+            {/* Reject reason modal */}
+            {rejectModal && (
+                <Modal title="Reject Document" onClose={() => setRejectModal(null)} isMobile={isMobile}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                        <Field label="Reason (optional)">
+                            <textarea
+                                style={{ ...s.input, height: 80, resize: "vertical" }}
+                                value={rejectReason}
+                                onChange={(e) => setRejectReason(e.target.value)}
+                                placeholder="Why are you rejecting this document?"
+                            />
+                        </Field>
+                        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 4 }}>
+                            <button style={s.ghostBtn} onClick={() => setRejectModal(null)}>Cancel</button>
+                            <button
+                                style={{ ...s.primaryBtn, background: "linear-gradient(to bottom,#c94040,#8b0000)" }}
+                                disabled={reject.isPending}
+                                onClick={() => reject.mutate({ documentId: selDocId, eventId: rejectModal.id, reason: rejectReason })}
+                            >
+                                {reject.isPending ? "Rejecting..." : "Reject"}
                             </button>
                         </div>
                     </div>
@@ -267,6 +370,8 @@ const s = {
     pill: { padding: "3px 9px", borderRadius: 20, fontSize: 11, fontWeight: 600 },
     miniAvatar: { width: 24, height: 24, borderRadius: "50%", background: "linear-gradient(135deg,#47bfff,#4F46E5)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 10, fontWeight: 700, flexShrink: 0 },
     centered: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 48 },
+    approveBtn: { padding: "4px 10px", background: "rgba(74,222,128,0.12)", border: "1px solid rgba(74,222,128,0.25)", borderRadius: 3, color: "#4ade80", fontSize: 12, cursor: "pointer" },
+    rejectBtn: { padding: "4px 10px", background: "rgba(201,64,64,0.12)", border: "1px solid rgba(201,64,64,0.25)", borderRadius: 3, color: "#c94040", fontSize: 12, cursor: "pointer" },
     primaryBtn: { padding: "9px 18px", background: "linear-gradient(to bottom,#47bfff 5%,#1a44c2 95%)", border: "none", borderRadius: 3, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" },
     ghostBtn: { padding: "9px 18px", background: "transparent", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 3, color: "#8f98a0", fontSize: 13, cursor: "pointer" },
     overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 20 },
