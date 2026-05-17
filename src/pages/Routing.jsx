@@ -20,11 +20,12 @@ const STATUS_COLORS = {
     1: { bg: "rgba(245,158,11,0.15)", color: "#f59e0b" },
     2: { bg: "rgba(74,222,128,0.12)", color: "#4ade80" },
     3: { bg: "rgba(201,64,64,0.12)", color: "#c94040" },
-    Pending: { bg: "rgba(245,158,11,0.15)", color: "#f59e0b" },
-    InProgress: { bg: "rgba(71,191,255,0.12)", color: "#47bfff" },
-    Completed: { bg: "rgba(74,222,128,0.12)", color: "#4ade80" },
+    4: { bg: "rgba(79,70,229,0.15)", color: "#818cf8" },
     Approved: { bg: "rgba(74,222,128,0.12)", color: "#4ade80" },
     Rejected: { bg: "rgba(201,64,64,0.12)", color: "#c94040" },
+    InReview: { bg: "rgba(245,158,11,0.15)", color: "#f59e0b" },
+    Draft: { bg: "rgba(255,255,255,0.06)", color: "#8f98a0" },
+    Archived: { bg: "rgba(79,70,229,0.15)", color: "#818cf8" },
 };
 
 const STATUS_LABELS = {
@@ -55,6 +56,7 @@ export default function Routing() {
         queryKey: ["routing", selDocId],
         queryFn: () => fetchRouting(selDocId),
         enabled: !!selDocId,
+        staleTime: 0,
     });
 
     const create = useMutation({
@@ -103,13 +105,12 @@ export default function Routing() {
         return u.email || "Unknown";
     };
 
-    // get current user id from store
-    const currentUserId = user?.id || user?.Id || user?.nameid || user?.["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"];
-        
-    const isRecipient = (ev) => {
-        return ev.toUserId && currentUserId &&
-            ev.toUserId.toString().toLowerCase() === currentUserId.toString().toLowerCase();
-    };
+    const currentUserId = user?.id || user?.Id || user?.nameid ||
+        user?.["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"];
+
+    const isRecipient = (ev) =>
+        ev.toUserId && currentUserId &&
+        ev.toUserId.toString().toLowerCase() === currentUserId.toString().toLowerCase();
 
     const canActOn = (ev) => {
         const status = ev.statusAfter ?? ev.status;
@@ -117,6 +118,9 @@ export default function Routing() {
             status === 2 || status === 3;
         return isRecipient(ev) && !alreadyActed;
     };
+
+    const routingEvents = events.filter(ev => ev.toUserId != null);
+    const statusEvents = events.filter(ev => ev.toUserId == null);
 
     return (
         <AppLayout>
@@ -166,7 +170,7 @@ export default function Routing() {
                 {selDocId && (
                     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-                        {/* Routing Events */}
+                        {/* Routing Events table */}
                         <div style={s.tableWrap}>
                             <div style={s.tableHeader}>
                                 <span style={s.tableTitle}>
@@ -175,7 +179,7 @@ export default function Routing() {
                             </div>
                             {isLoading ? (
                                 <div style={s.centered}><Spinner /></div>
-                            ) : events.filter(ev => ev.toUserId != null).length === 0 ? (
+                            ) : routingEvents.length === 0 ? (
                                 <div style={s.centered}>
                                     <p style={{ color: "#8f98a0" }}>No routing events for this document</p>
                                 </div>
@@ -190,7 +194,7 @@ export default function Routing() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {events.filter(ev => ev.toUserId != null).map((ev) => {
+                                            {routingEvents.map((ev) => {
                                                 const status = ev.statusAfter ?? ev.status;
                                                 const sc = STATUS_COLORS[status] || STATUS_COLORS[0];
                                                 const label = STATUS_LABELS[status] || String(status);
@@ -252,8 +256,8 @@ export default function Routing() {
                             )}
                         </div>
 
-                        {/* Status Change History */}
-                        {events.filter(ev => ev.toUserId == null).length > 0 && (
+                        {/* Status Change History table — only shown if there are status events */}
+                        {statusEvents.length > 0 && (
                             <div style={s.tableWrap}>
                                 <div style={s.tableHeader}>
                                     <span style={s.tableTitle}>Status change history</span>
@@ -268,7 +272,7 @@ export default function Routing() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {events.filter(ev => ev.toUserId == null).map((ev) => {
+                                            {statusEvents.map((ev) => {
                                                 const status = ev.statusAfter ?? ev.status;
                                                 const sc = STATUS_COLORS[status] || STATUS_COLORS[0];
                                                 const label = STATUS_LABELS[status] || String(status);
@@ -301,53 +305,7 @@ export default function Routing() {
                     </div>
                 )}
 
-                            {/* Status Change History */}
-                            {events.filter(ev => ev.toUserId == null).length > 0 && (
-                                <div style={s.tableWrap}>
-                                    <div style={s.tableHeader}>
-                                        <span style={s.tableTitle}>Status change history</span>
-                                    </div>
-                                    <div style={{ overflowX: "auto" }}>
-                                        <table style={s.table}>
-                                            <thead>
-                                                <tr>
-                                                    {["Status Changed To", "Date"].map((h) => (
-                                                        <th key={h} style={s.th}>{h}</th>
-                                                    ))}
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {events.filter(ev => ev.toUserId == null).map((ev) => {
-                                                    const status = ev.statusAfter ?? ev.status;
-                                                    const sc = STATUS_COLORS[status] || STATUS_COLORS[0];
-                                                    const label = STATUS_LABELS[status] || String(status);
-                                                    return (
-                                                        <tr
-                                                            key={ev.id}
-                                                            style={s.tr}
-                                                            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
-                                                            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                                        >
-                                                            <td style={s.td}>
-                                                                <span style={{ ...s.pill, background: sc.bg, color: sc.color }}>
-                                                                    {label}
-                                                                </span>
-                                                            </td>
-                                                            <td style={{ ...s.td, color: "#8f98a0", fontSize: 12, whiteSpace: "nowrap" }}>
-                                                                {ev.timestamp || ev.createdAt
-                                                                    ? new Date(ev.timestamp || ev.createdAt).toLocaleString()
-                                                                    : "—"}
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            )}
-
-                        </div>
+            </div>
 
             {/* Route modal */}
             {modal && (
@@ -363,7 +321,7 @@ export default function Routing() {
                             <select style={s.input} value={form.toUserId} onChange={set("toUserId")}>
                                 <option value="">Select a user...</option>
                                 {users.map((u) => (
-                                    <option key={u.id} value={u.id}>
+                                    <option key={u.id || u.Id} value={u.id || u.Id}>
                                         {u.firstName && u.lastName
                                             ? (u.firstName + " " + u.lastName).trim()
                                             : u.fullName || u.email}
@@ -418,6 +376,7 @@ export default function Routing() {
                     </div>
                 </Modal>
             )}
+
         </AppLayout>
     );
 }
