@@ -28,9 +28,9 @@ const STATUS_COLORS = {
 };
 
 const STATUS_LABELS = {
-    0: "Draft", 1: "Under Review", 2: "Approved", 3: "Rejected", 4: "Archived",
-    Pending: "Pending", InProgress: "In Progress", Completed: "Completed",
-    Approved: "Approved", Rejected: "Rejected",
+    0: "Draft", 1: "In Review", 2: "Approved", 3: "Rejected", 4: "Archived",
+    Draft: "Draft", InReview: "In Review", Approved: "Approved",
+    Rejected: "Rejected", Archived: "Archived",
 };
 
 const EMPTY = { documentId: "", toUserId: "", notes: "" };
@@ -164,92 +164,190 @@ export default function Routing() {
 
                 {/* Routing history */}
                 {selDocId && (
-                    <div style={s.tableWrap}>
-                        <div style={s.tableHeader}>
-                            <span style={s.tableTitle}>
-                                Routing history — {documents.find((d) => d.id === selDocId)?.title}
-                            </span>
-                        </div>
-                        {isLoading ? (
-                            <div style={s.centered}><Spinner /></div>
-                        ) : events.length === 0 ? (
-                            <div style={s.centered}>
-                                <p style={{ color: "#8f98a0" }}>No routing events for this document</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+                        {/* Routing Events */}
+                        <div style={s.tableWrap}>
+                            <div style={s.tableHeader}>
+                                <span style={s.tableTitle}>
+                                    Routing history — {documents.find((d) => d.id === selDocId)?.title}
+                                </span>
                             </div>
-                        ) : (
-                            <div style={{ overflowX: "auto" }}>
-                                <table style={s.table}>
-                                    <thead>
-                                        <tr>
-                                            {["Routed To", "Note", "Status", "Date", "Action"].map((h) => (
-                                                <th key={h} style={s.th}>{h}</th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {events.map((ev) => {
-                                            const status = ev.statusAfter ?? ev.status;
-                                            const sc = STATUS_COLORS[status] || STATUS_COLORS.Pending;
-                                            const label = STATUS_LABELS[status] || String(status);
-                                            return (
-                                                <tr
-                                                    key={ev.id}
-                                                    style={s.tr}
-                                                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
-                                                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                                >
-                                                    <td style={s.td}>
-                                                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                                            <div style={s.miniAvatar}>
-                                                                {(userName(ev.toUserId)?.[0] || "?").toUpperCase()}
+                            {isLoading ? (
+                                <div style={s.centered}><Spinner /></div>
+                            ) : events.filter(ev => ev.toUserId != null).length === 0 ? (
+                                <div style={s.centered}>
+                                    <p style={{ color: "#8f98a0" }}>No routing events for this document</p>
+                                </div>
+                            ) : (
+                                <div style={{ overflowX: "auto" }}>
+                                    <table style={s.table}>
+                                        <thead>
+                                            <tr>
+                                                {["Routed To", "Note", "Status", "Date", "Action"].map((h) => (
+                                                    <th key={h} style={s.th}>{h}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {events.filter(ev => ev.toUserId != null).map((ev) => {
+                                                const status = ev.statusAfter ?? ev.status;
+                                                const sc = STATUS_COLORS[status] || STATUS_COLORS[0];
+                                                const label = STATUS_LABELS[status] || String(status);
+                                                return (
+                                                    <tr
+                                                        key={ev.id}
+                                                        style={s.tr}
+                                                        onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+                                                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                                    >
+                                                        <td style={s.td}>
+                                                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                                <div style={s.miniAvatar}>
+                                                                    {(userName(ev.toUserId)?.[0] || "?").toUpperCase()}
+                                                                </div>
+                                                                <span style={{ whiteSpace: "nowrap" }}>{userName(ev.toUserId)}</span>
                                                             </div>
-                                                            <span style={{ whiteSpace: "nowrap" }}>{userName(ev.toUserId)}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td style={{ ...s.td, color: "#8f98a0", fontSize: 12 }}>
-                                                        {ev.note || ev.notes || "—"}
-                                                    </td>
-                                                    <td style={s.td}>
-                                                        <span style={{ ...s.pill, background: sc.bg, color: sc.color, whiteSpace: "nowrap" }}>
-                                                            {label}
-                                                        </span>
-                                                    </td>
-                                                    <td style={{ ...s.td, color: "#8f98a0", fontSize: 12, whiteSpace: "nowrap" }}>
-                                                        {ev.timestamp || ev.createdAt
-                                                            ? new Date(ev.timestamp || ev.createdAt).toLocaleDateString()
-                                                            : "—"}
-                                                    </td>
-                                                    <td style={{ ...s.td, whiteSpace: "nowrap" }}>
-                                                        {canActOn(ev) ? (
-                                                            <div style={{ display: "flex", gap: 6 }}>
-                                                                <button
-                                                                    style={{ ...s.approveBtn }}
-                                                                    disabled={approve.isPending}
-                                                                    onClick={() => approve.mutate({ documentId: selDocId, eventId: ev.id })}
-                                                                >
-                                                                    Approve
-                                                                </button>
-                                                                <button
-                                                                    style={{ ...s.rejectBtn }}
-                                                                    onClick={() => { setRejectModal(ev); setRejectReason(""); }}
-                                                                >
-                                                                    Reject
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <span style={{ color: "#8f98a0", fontSize: 12 }}>—</span>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
+                                                        </td>
+                                                        <td style={{ ...s.td, color: "#8f98a0", fontSize: 12 }}>
+                                                            {ev.note || ev.notes || "—"}
+                                                        </td>
+                                                        <td style={s.td}>
+                                                            <span style={{ ...s.pill, background: sc.bg, color: sc.color, whiteSpace: "nowrap" }}>
+                                                                {label}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ ...s.td, color: "#8f98a0", fontSize: 12, whiteSpace: "nowrap" }}>
+                                                            {ev.timestamp || ev.createdAt
+                                                                ? new Date(ev.timestamp || ev.createdAt).toLocaleDateString()
+                                                                : "—"}
+                                                        </td>
+                                                        <td style={{ ...s.td, whiteSpace: "nowrap" }}>
+                                                            {canActOn(ev) ? (
+                                                                <div style={{ display: "flex", gap: 6 }}>
+                                                                    <button
+                                                                        style={s.approveBtn}
+                                                                        disabled={approve.isPending}
+                                                                        onClick={() => approve.mutate({ documentId: selDocId, eventId: ev.id })}
+                                                                    >
+                                                                        Approve
+                                                                    </button>
+                                                                    <button
+                                                                        style={s.rejectBtn}
+                                                                        onClick={() => { setRejectModal(ev); setRejectReason(""); }}
+                                                                    >
+                                                                        Reject
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <span style={{ color: "#8f98a0", fontSize: 12 }}>—</span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Status Change History */}
+                        {events.filter(ev => ev.toUserId == null).length > 0 && (
+                            <div style={s.tableWrap}>
+                                <div style={s.tableHeader}>
+                                    <span style={s.tableTitle}>Status change history</span>
+                                </div>
+                                <div style={{ overflowX: "auto" }}>
+                                    <table style={s.table}>
+                                        <thead>
+                                            <tr>
+                                                {["Status Changed To", "Date"].map((h) => (
+                                                    <th key={h} style={s.th}>{h}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {events.filter(ev => ev.toUserId == null).map((ev) => {
+                                                const status = ev.statusAfter ?? ev.status;
+                                                const sc = STATUS_COLORS[status] || STATUS_COLORS[0];
+                                                const label = STATUS_LABELS[status] || String(status);
+                                                return (
+                                                    <tr
+                                                        key={ev.id}
+                                                        style={s.tr}
+                                                        onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+                                                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                                    >
+                                                        <td style={s.td}>
+                                                            <span style={{ ...s.pill, background: sc.bg, color: sc.color }}>
+                                                                {label}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ ...s.td, color: "#8f98a0", fontSize: 12, whiteSpace: "nowrap" }}>
+                                                            {ev.timestamp || ev.createdAt
+                                                                ? new Date(ev.timestamp || ev.createdAt).toLocaleString()
+                                                                : "—"}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         )}
+
                     </div>
                 )}
-            </div>
+
+                            {/* Status Change History */}
+                            {events.filter(ev => ev.toUserId == null).length > 0 && (
+                                <div style={s.tableWrap}>
+                                    <div style={s.tableHeader}>
+                                        <span style={s.tableTitle}>Status change history</span>
+                                    </div>
+                                    <div style={{ overflowX: "auto" }}>
+                                        <table style={s.table}>
+                                            <thead>
+                                                <tr>
+                                                    {["Status Changed To", "Date"].map((h) => (
+                                                        <th key={h} style={s.th}>{h}</th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {events.filter(ev => ev.toUserId == null).map((ev) => {
+                                                    const status = ev.statusAfter ?? ev.status;
+                                                    const sc = STATUS_COLORS[status] || STATUS_COLORS[0];
+                                                    const label = STATUS_LABELS[status] || String(status);
+                                                    return (
+                                                        <tr
+                                                            key={ev.id}
+                                                            style={s.tr}
+                                                            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+                                                            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                                        >
+                                                            <td style={s.td}>
+                                                                <span style={{ ...s.pill, background: sc.bg, color: sc.color }}>
+                                                                    {label}
+                                                                </span>
+                                                            </td>
+                                                            <td style={{ ...s.td, color: "#8f98a0", fontSize: 12, whiteSpace: "nowrap" }}>
+                                                                {ev.timestamp || ev.createdAt
+                                                                    ? new Date(ev.timestamp || ev.createdAt).toLocaleString()
+                                                                    : "—"}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                        </div>
 
             {/* Route modal */}
             {modal && (
