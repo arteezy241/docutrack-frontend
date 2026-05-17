@@ -93,8 +93,11 @@ export default function Routing() {
     );
 
     const userName = (id) => {
-        const u = users.find((u) => u.id === id);
-        if (!u) return "Unknown";
+        if (!id) return "System";
+        const u = users.find((u) =>
+            (u.id || u.Id || "").toString().toLowerCase() === id.toString().toLowerCase()
+        );
+        if (!u) return "Deleted User";
         if (u.firstName || u.lastName) return (u.firstName + " " + u.lastName).trim();
         if (u.fullName) return u.fullName;
         return u.email || "Unknown";
