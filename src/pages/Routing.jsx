@@ -11,12 +11,15 @@ const createRoute = ({ documentId, ...body }) =>
     client.post("/Documents/" + documentId + "/routing", body).then((r) => r.data);
 
 const STATUS_COLORS = {
+    0: { bg: "rgba(255,255,255,0.06)", color: "#8f98a0" },
+    1: { bg: "rgba(245,158,11,0.15)", color: "#f59e0b" },
+    2: { bg: "rgba(74,222,128,0.12)", color: "#4ade80" },
+    3: { bg: "rgba(201,64,64,0.12)", color: "#c94040" },
     Pending: { bg: "rgba(245,158,11,0.15)", color: "#f59e0b" },
     InProgress: { bg: "rgba(71,191,255,0.12)", color: "#47bfff" },
     Completed: { bg: "rgba(74,222,128,0.12)", color: "#4ade80" },
     Rejected: { bg: "rgba(201,64,64,0.12)", color: "#c94040" },
 };
-
 const EMPTY = { documentId: "", toUserId: "", notes: "" };
 
 export default function Routing() {
@@ -56,7 +59,11 @@ export default function Routing() {
 
     const userName = (id) => {
         const u = users.find((u) => u.id === id);
-        return u ? (u.firstName + " " + u.lastName).trim() || u.email : id;
+        if (!u) return id;
+        if (u.firstName || u.lastName) return (u.firstName + " " + u.lastName).trim();
+        if (u.fullName) return u.fullName;
+        if (u.email) return u.email;
+        return "Unknown";
     };
 
     return (
@@ -147,12 +154,12 @@ export default function Routing() {
                                                     </td>
                                                     <td style={{ ...s.td, color: "#8f98a0", fontSize: 12 }}>{ev.notes || "—"}</td>
                                                     <td style={s.td}>
-                                                        <span style={{ ...s.pill, background: sc.bg, color: sc.color, whiteSpace: "nowrap" }}>
-                                                            {ev.status || "Pending"}
+                                                        <span style={{ ...s.pill, background: sc.bg, color: sc.color }}>
+                                                            {ev.statusAfter || ev.status || "Pending"}
                                                         </span>
                                                     </td>
                                                     <td style={{ ...s.td, color: "#8f98a0", fontSize: 12, whiteSpace: "nowrap" }}>
-                                                        {ev.createdAt ? new Date(ev.createdAt).toLocaleDateString() : "—"}
+                                                        {ev.timestamp || ev.createdAt ? new Date(ev.timestamp || ev.createdAt).toLocaleDateString() : "—"}
                                                     </td>
                                                 </tr>
                                             );
