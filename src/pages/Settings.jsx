@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "../components/Sidebar";
 import useAuthStore from "../store/authStore";
@@ -12,26 +12,115 @@ const toggleApiKey = (id) => client.patch("/apikeys/" + id + "/toggle").then((r)
 
 const TABS = ["Profile", "Security", "API Keys", "Notifications"];
 
+function TwoFactorSection() {
+    const { user, setUser } = useAuthStore();
+    const [enabled, setEnabled] = useState(user?.isTwoFactorEnabled ?? false);
+    const [devices, setDevices] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const devicesRes = await client.get("/auth/trusted-devices");
+                setDevices(devicesRes.data);
+            } catch {
+                // ignore
+            } finally {
+                setLoading(false);
+            }
+        };
+        load();
+    }, []);
+
+    const toggle = async () => {
+        try {
+            const res = await client.patch("/auth/2fa/toggle");
+            const newVal = res.data.isTwoFactorEnabled;
+            setEnabled(newVal);
+            setUser({ ...user, isTwoFactorEnabled: newVal });
+        } catch {
+            alert("Failed to toggle 2FA");
+        }
+    };
+
+    const removeDevice = async (id) => {
+        if (!window.confirm("Remove this trusted device?")) return;
+        try {
+            await client.delete("/auth/trusted-devices/" + id);
+            setDevices(d => d.filter(dev => dev.id !== id));
+        } catch {
+            alert("Failed to remove device");
+        }
+    };
+
+    if (loading) return <p style={{ color: "#8f98a0", fontSize: 13 }}>Loading...</p>;
+
+    return (
+        <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+                <div
+                    onClick={toggle}
+                    style={{ width: 40, height: 22, borderRadius: 11, position: "relative", transition: "background 0.2s", cursor: "pointer", background: enabled ? "#4F46E5" : "rgba(255,255,255,0.12)" }}
+                >
+                    <div style={{ position: "absolute", top: 2, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "transform 0.2s", transform: enabled ? "translateX(18px)" : "translateX(2px)" }} />
+                </div>
+                <span style={{ fontSize: 13, color: "#c6d4df", fontWeight: 600 }}>
+                    {enabled ? "2FA Enabled" : "2FA Disabled"}
+                </span>
+            </div>
+
+            {devices.length > 0 && (
+                <div>
+                    <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 700, color: "#4a7fa5", letterSpacing: "0.05em" }}>TRUSTED DEVICES</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        {devices.map((dev) => (
+                            <div key={dev.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "#0e1621", borderRadius: 4, border: "1px solid rgba(255,255,255,0.08)" }}>
+                                <div>
+                                    <p style={{ margin: 0, fontSize: 12, color: "#c6d4df", fontWeight: 500 }}>
+                                        {dev.deviceName?.slice(0, 60) || "Unknown Device"}
+                                    </p>
+                                    <p style={{ margin: "2px 0 0", fontSize: 11, color: "#8f98a0" }}>
+                                        Last used: {new Date(dev.lastUsedAt).toLocaleDateString()}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => removeDevice(dev.id)}
+                                    style={{ background: "none", border: "none", color: "#c94040", fontSize: 12, cursor: "pointer" }}
+                                >
+                                    Remove
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {devices.length === 0 && (
+                <p style={{ fontSize: 12, color: "#8f98a0", margin: 0 }}>
+                    No trusted devices yet. Devices will appear here after verifying a new device login.
+                </p>
+            )}
+        </div>
+    );
+}
+
 export default function Settings() {
-    const { user, login } = useAuthStore();
+    const { user } = useAuthStore();
     const qc = useQueryClient();
     const width = useWindowWidth();
     const isMobile = width < 768;
 
     const [tab, setTab] = useState("Profile");
-
     const [profile, setProfile] = useState({
         firstName: user?.firstName || user?.name?.split(" ")[0] || "",
         lastName: user?.lastName || user?.name?.split(" ")[1] || "",
         email: user?.email || "",
     });
-
     const [pw, setPw] = useState({ currentPassword: "", newPassword: "", confirm: "" });
     const [pwError, setPwError] = useState("");
     const [pwSuccess, setPwSuccess] = useState(false);
     const [newKeyName, setNewKeyName] = useState("");
     const [copiedId, setCopiedId] = useState(null);
-
     const [notifs, setNotifs] = useState({
         emailOnRoute: true,
         emailOnApproval: true,
@@ -89,7 +178,6 @@ export default function Settings() {
                     <p style={s.pageSub}>Manage your account and preferences</p>
                 </div>
 
-                {/* tab bar */}
                 <div style={s.tabBar}>
                     {TABS.map((t) => (
                         <button
@@ -110,16 +198,12 @@ export default function Settings() {
                             <div style={s.avatarSection}>
                                 <div style={s.bigAvatar}>{initial}</div>
                                 <div style={{ minWidth: 0 }}>
-                                    <p style={{ margin: "0 0 2px", fontSize: 15, fontWeight: 700, color: "#c6d4df" }}>
-                                        {displayName}
-                                    </p>
-                                    <p style={{ margin: 0, fontSize: 12, color: "#8f98a0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                        {profile.email}
-                                    </p>
+                                    <p style={{ margin: "0 0 2px", fontSize: 15, fontWeight: 700, color: "#c6d4df" }}>{displayName}</p>
+                                    <p style={{ margin: 0, fontSize: 12, color: "#8f98a0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profile.email}</p>
                                 </div>
                             </div>
                             <div style={s.divider} />
-                            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
+                            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14, marginTop: 16 }}>
                                 <Field label="First Name">
                                     <input style={s.input} value={profile.firstName} onChange={setP("firstName")} />
                                 </Field>
@@ -132,9 +216,7 @@ export default function Settings() {
                                     <input style={s.input} type="email" value={profile.email} onChange={setP("email")} />
                                 </Field>
                             </div>
-                            <p style={{ color: "#8f98a0", fontSize: 12, marginTop: 12 }}>
-                                Profile editing coming soon via API.
-                            </p>
+                            <p style={{ color: "#8f98a0", fontSize: 12, marginTop: 12 }}>Profile editing coming soon via API.</p>
                         </div>
                     </div>
                 )}
@@ -161,6 +243,7 @@ export default function Settings() {
                                 <button style={s.primaryBtn} onClick={handleSavePw}>Update Password</button>
                             </div>
                         </div>
+
                         <div style={s.divider} />
                         <div style={s.cardBody}>
                             <h3 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 700, color: "#c6d4df" }}>Active Sessions</h3>
@@ -172,6 +255,17 @@ export default function Settings() {
                                 <span style={{ fontSize: 11, fontWeight: 600, color: "#4ade80", background: "rgba(74,222,128,0.1)", padding: "2px 8px", borderRadius: 3 }}>Active</span>
                             </div>
                         </div>
+
+                        <div style={s.divider} />
+                        <div style={s.cardBody}>
+                            <h3 style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 700, color: "#c6d4df" }}>
+                                Two-Factor Authentication
+                            </h3>
+                            <p style={{ margin: "0 0 16px", fontSize: 13, color: "#8f98a0" }}>
+                                When enabled, signing in from a new device will require email verification.
+                            </p>
+                            <TwoFactorSection />
+                        </div>
                     </div>
                 )}
 
@@ -182,11 +276,8 @@ export default function Settings() {
                         <div style={s.cardBody}>
                             <p style={{ margin: "0 0 16px", fontSize: 13, color: "#8f98a0", lineHeight: 1.6 }}>
                                 Use API keys to authenticate requests. Include in headers as{" "}
-                                <code style={{ background: "rgba(255,255,255,0.08)", padding: "1px 6px", borderRadius: 3, fontSize: 12 }}>
-                                    X-API-Key: your_key
-                                </code>
+                                <code style={{ background: "rgba(255,255,255,0.08)", padding: "1px 6px", borderRadius: 3, fontSize: 12 }}>X-API-Key: your_key</code>
                             </p>
-
                             <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 10, marginBottom: 16 }}>
                                 <input
                                     style={{ ...s.input, flex: 1 }}
@@ -202,13 +293,9 @@ export default function Settings() {
                                     {createKey.isPending ? "Generating..." : "+ Generate Key"}
                                 </button>
                             </div>
-
                             <div style={s.divider} />
-
                             {keysLoading ? (
-                                <div style={{ display: "flex", justifyContent: "center", padding: 24 }}>
-                                    <Spinner />
-                                </div>
+                                <div style={{ display: "flex", justifyContent: "center", padding: 24 }}><Spinner /></div>
                             ) : apiKeys.length === 0 ? (
                                 <p style={{ color: "#8f98a0", fontSize: 13, textAlign: "center", padding: "24px 0" }}>
                                     No API keys yet — generate one above
@@ -232,38 +319,24 @@ export default function Settings() {
                                                     </span>
                                                 </div>
                                                 <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                                                    <button
-                                                        style={{ ...s.iconBtn, color: key.isActive ? "#f59e0b" : "#4ade80" }}
-                                                        onClick={() => toggleKey.mutate(key.id)}
-                                                    >
+                                                    <button style={{ ...s.iconBtn, color: key.isActive ? "#f59e0b" : "#4ade80" }} onClick={() => toggleKey.mutate(key.id)}>
                                                         {key.isActive ? "Deactivate" : "Activate"}
                                                     </button>
-                                                    <button
-                                                        style={{ ...s.iconBtn, color: "#c94040" }}
-                                                        onClick={() => { if (window.confirm("Revoke key " + key.name + "?")) revokeKey.mutate(key.id); }}
-                                                    >
+                                                    <button style={{ ...s.iconBtn, color: "#c94040" }} onClick={() => { if (window.confirm("Revoke key " + key.name + "?")) revokeKey.mutate(key.id); }}>
                                                         Revoke
                                                     </button>
                                                 </div>
                                             </div>
-
                                             <div style={s.keyValueRow}>
-                                                <code style={s.keyCode}>
-                                                    {key.key.slice(0, 12)}{"•".repeat(20)}
-                                                </code>
+                                                <code style={s.keyCode}>{key.key.slice(0, 12)}{"•".repeat(20)}</code>
                                                 <button style={s.copyBtn} onClick={() => copyToClipboard(key.key, key.id)}>
                                                     {copiedId === key.id ? "Copied!" : "Copy"}
                                                 </button>
                                             </div>
-
                                             <div style={{ display: "flex", gap: 16, marginTop: 6, flexWrap: "wrap" }}>
-                                                <span style={{ fontSize: 11, color: "#8f98a0" }}>
-                                                    Created: {new Date(key.createdAt).toLocaleDateString()}
-                                                </span>
+                                                <span style={{ fontSize: 11, color: "#8f98a0" }}>Created: {new Date(key.createdAt).toLocaleDateString()}</span>
                                                 {key.lastUsedAt && (
-                                                    <span style={{ fontSize: 11, color: "#8f98a0" }}>
-                                                        Last used: {new Date(key.lastUsedAt).toLocaleDateString()}
-                                                    </span>
+                                                    <span style={{ fontSize: 11, color: "#8f98a0" }}>Last used: {new Date(key.lastUsedAt).toLocaleDateString()}</span>
                                                 )}
                                             </div>
                                         </div>

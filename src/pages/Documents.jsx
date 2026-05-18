@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "../components/Sidebar";
 import client from "../api/client";
 import useWindowWidth from "../hooks/useWindowWidth";
+import useAuthStore from "../store/authStore";
 
 
 const triggerWorkflow = (id) => client.post("/workflow/trigger/" + id).then((r) => r.data);
@@ -58,6 +59,7 @@ const EMPTY_FORM = { title: "", description: "", type: "", status: "Draft" };
 
 export default function Documents() {
     const qc = useQueryClient();
+    const { user } = useAuthStore();
     const width = useWindowWidth();
     const isMobile = width < 768;
 
@@ -253,7 +255,7 @@ export default function Documents() {
                         </Field>
                         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 4 }}>
                             <button style={s.ghostBtn} onClick={() => setModal(null)}>Cancel</button>
-                            <button style={s.primaryBtn} onClick={() => { if (form.title.trim()) create.mutate(form); }} disabled={create.isPending}>
+                            <button style={s.primaryBtn} onClick={() => { if (form.title.trim()) create.mutate({ ...form, ownerId: user?.id }); }} disabled={create.isPending}>
                                 {create.isPending ? "Creating..." : "Create"}
                             </button>
                         </div>

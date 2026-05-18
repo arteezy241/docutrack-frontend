@@ -5,12 +5,16 @@ import client from "../api/client";
 import useWindowWidth from "../hooks/useWindowWidth";
 
 const fetchWorkflows = () => client.get("/workflow").then((r) => r.data);
-const fetchDepts = () => client.get("/Departments").then((r) => r.data);
+const fetchUsers = () => client.get("/Users").then((r) => r.data);
 const createWorkflow = (body) => client.post("/workflow", body).then((r) => r.data);
 const deleteWorkflow = (id) => client.delete("/workflow/" + id).then((r) => r.data);
 const toggleWorkflow = (id) => client.patch("/workflow/" + id + "/toggle").then((r) => r.data);
 
-const EMPTY = { name: "", description: "", fromDepartmentId: "", toDepartmentId: "", order: 1, isActive: true };
+const STATUS_LABELS = {
+    0: "Draft", 1: "In Review", 2: "Approved", 3: "Rejected", 4: "Archived",
+};
+
+const EMPTY = { name: "", triggerStatus: 0, assignToUserId: "", nextStatus: 2, note: "" };
 
 export default function Workflow() {
     const qc = useQueryClient();
@@ -21,7 +25,7 @@ export default function Workflow() {
     const [form, setForm] = useState(EMPTY);
 
     const { data: rules = [], isLoading } = useQuery({ queryKey: ["workflow"], queryFn: fetchWorkflows });
-    const { data: depts = [] } = useQuery({ queryKey: ["departments"], queryFn: fetchDepts });
+    const { data: users = [] } = useQuery({ queryKey: ["users"], queryFn: fetchUsers });
 
     const create = useMutation({
         mutationFn: createWorkflow,
@@ -36,19 +40,24 @@ export default function Workflow() {
         onSuccess: () => qc.invalidateQueries(["workflow"]),
     });
 
-    const set = (k) => (e) => setForm((f) => ({
-        ...f,
-        [k]: k === "order" ? Number(e.target.value)
-            : k === "isActive" ? e.target.checked
-                : e.target.value,
-    }));
+    const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+    const setNum = (k) => (e) => setForm((f) => ({ ...f, [k]: Number(e.target.value) }));
 
     const handleSubmit = () => {
         if (!form.name.trim()) return;
-        create.mutate(form);
+        create.mutate({
+            ...form,
+            assignToUserId: form.assignToUserId || null, // convert empty string to null
+        });
     };
 
-    const deptName = (id) => depts.find((d) => d.id === id)?.name || "—";
+    const userName = (id) => {
+        if (!id) return "Any";
+        const u = users.find((u) => (u.id || u.Id) === id);
+        if (!u) return "Unknown";
+        return u.fullName || ((u.firstName || "") + " " + (u.lastName || "")).trim() || u.email || "Unknown";
+    };
 
     return (
         <AppLayout>
@@ -76,7 +85,7 @@ export default function Workflow() {
                         ...s.grid,
                         gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(280px,1fr))",
                     }}>
-                        {[...rules].sort((a, b) => (a.order || 0) - (b.order || 0)).map((rule) => (
+                        {rules.map((rule) => (
                             <div key={rule.id} style={s.ruleCard}>
                                 <div style={s.ruleTop}>
                                     <div style={s.ruleOrder}>#{rule.order || "—"}</div>
@@ -86,13 +95,23 @@ export default function Workflow() {
                                 </div>
 
                                 <h3 style={s.ruleName}>{rule.name}</h3>
-                                {rule.description && <p style={s.ruleDesc}>{rule.description}</p>}
+                                {rule.note && <p style={s.ruleDesc}>{rule.note}</p>}
 
                                 <div style={s.ruleFlow}>
-                                    <span style={s.deptChip}>{deptName(rule.fromDepartmentId)}</span>
+                                    <span style={s.deptChip}>
+                                        When: {STATUS_LABELS[rule.triggerStatus] ?? String(rule.triggerStatus)}
+                                    </span>
                                     <span style={s.arrow}>→</span>
-                                    <span style={s.deptChip}>{deptName(rule.toDepartmentId)}</span>
+                                    <span style={s.deptChip}>
+                                        Set: {STATUS_LABELS[rule.nextStatus] ?? String(rule.nextStatus)}
+                                    </span>
                                 </div>
+
+                                {rule.assignToUserId && (
+                                    <p style={{ margin: 0, fontSize: 12, color: "#8f98a0" }}>
+                                        Assign to: {userName(rule.assignToUserId)}
+                                    </p>
+                                )}
 
                                 <div style={s.ruleActions}>
                                     <button
@@ -119,37 +138,40 @@ export default function Workflow() {
                 <Modal title="New Workflow Rule" onClose={() => { setModal(false); setForm(EMPTY); }} isMobile={isMobile}>
                     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                         <Field label="Rule Name *">
-                            <input style={s.input} value={form.name} onChange={set("name")} placeholder="e.g. Registrar to Dean" />
+                            <input style={s.input} value={form.name} onChange={set("name")} placeholder="e.g. Auto-route to dean" />
                         </Field>
-                        <Field label="Description">
+                        <Field label="Trigger when document status is">
+                            <select style={s.input} value={form.triggerStatus} onChange={setNum("triggerStatus")}>
+                                {Object.entries(STATUS_LABELS).map(([val, label]) => (
+                                    <option key={val} value={val}>{label}</option>
+                                ))}
+                            </select>
+                        </Field>
+                        <Field label="Assign to User">
+                            <select style={s.input} value={form.assignToUserId} onChange={set("assignToUserId")}>
+                                <option value="">Anyone</option>
+                                {users.map((u) => (
+                                    <option key={u.id || u.Id} value={u.id || u.Id}>
+                                        {u.fullName || ((u.firstName || "") + " " + (u.lastName || "")).trim() || u.email}
+                                    </option>
+                                ))}
+                            </select>
+                        </Field>
+                        <Field label="Set next status to">
+                            <select style={s.input} value={form.nextStatus} onChange={setNum("nextStatus")}>
+                                {Object.entries(STATUS_LABELS).map(([val, label]) => (
+                                    <option key={val} value={val}>{label}</option>
+                                ))}
+                            </select>
+                        </Field>
+                        <Field label="Note">
                             <textarea
                                 style={{ ...s.input, height: 60, resize: "vertical" }}
-                                value={form.description}
-                                onChange={set("description")}
-                                placeholder="What triggers this rule?"
+                                value={form.note}
+                                onChange={set("note")}
+                                placeholder="Description of this rule..."
                             />
                         </Field>
-                        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
-                            <Field label="From Department">
-                                <select style={s.input} value={form.fromDepartmentId} onChange={set("fromDepartmentId")}>
-                                    <option value="">Any</option>
-                                    {depts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-                                </select>
-                            </Field>
-                            <Field label="To Department">
-                                <select style={s.input} value={form.toDepartmentId} onChange={set("toDepartmentId")}>
-                                    <option value="">Any</option>
-                                    {depts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-                                </select>
-                            </Field>
-                        </div>
-                        <Field label="Order / Priority">
-                            <input type="number" min={1} style={s.input} value={form.order} onChange={set("order")} />
-                        </Field>
-                        <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-                            <input type="checkbox" checked={form.isActive} onChange={set("isActive")} />
-                            <span style={{ fontSize: 13, color: "#c6d4df" }}>Active</span>
-                        </label>
                         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 4 }}>
                             <button style={s.ghostBtn} onClick={() => { setModal(false); setForm(EMPTY); }}>Cancel</button>
                             <button style={s.primaryBtn} onClick={handleSubmit} disabled={create.isPending}>

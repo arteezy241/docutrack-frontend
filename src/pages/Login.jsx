@@ -5,11 +5,17 @@ import useAuthStore from '../store/authStore';
 import { GoogleLogin } from "@react-oauth/google";
 import useWindowWidth from '../hooks/useWindowWidth';
 
+
 export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showDeviceOtp, setShowDeviceOtp] = useState(false);
+    const [deviceOtp, setDeviceOtp] = useState('');
+    const [pendingEmail, setPendingEmail] = useState('');
+    const [deviceOtpLoading, setDeviceOtpLoading] = useState(false);
+    const [deviceOtpError, setDeviceOtpError] = useState('');
     const { login } = useAuthStore();
     const navigate = useNavigate();
     const width = useWindowWidth();
@@ -21,12 +27,39 @@ export default function Login() {
         setError('');
         try {
             const res = await client.post('/auth/login', { email, password });
+            if (res.data.requiresOtp) {
+                // new device detected — show OTP modal
+                setPendingEmail(res.data.email);
+                setShowDeviceOtp(true);
+                setLoading(false);
+                return;
+            }
             login(res.data.token, res.data.user);
             navigate('/');
         } catch (err) {
             setError(err.response?.data?.error || 'Login failed');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDeviceVerify = async () => {
+        setDeviceOtpLoading(true);
+        setDeviceOtpError('');
+        try {
+            const deviceName = navigator.userAgent.slice(0, 100);
+            const res = await client.post('/auth/verify-device', {
+                email: pendingEmail,
+                otp: deviceOtp,
+                deviceName,
+            });
+            localStorage.setItem('deviceToken', res.data.deviceToken);
+            login(res.data.token, res.data.user);
+            navigate('/');
+        } catch (err) {
+            setDeviceOtpError(err.response?.data?.error || 'Invalid OTP');
+        } finally {
+            setDeviceOtpLoading(false);
         }
     };
 
@@ -202,6 +235,57 @@ export default function Login() {
                     ))}
                 </div>
             </div>
+            {/* Device verification modal */}
+            {showDeviceOtp && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}>
+                    <div style={{ width: '100%', maxWidth: 360, borderRadius: 4, overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
+                        <div style={{ background: '#c6d4df', padding: '16px 20px 12px' }}>
+                            <h2 style={{ margin: 0, fontSize: 13, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1, color: '#3d3d3f' }}>
+                                New Device Detected
+                            </h2>
+                        </div>
+                        <div style={{ background: '#c6d4df', padding: '16px 20px' }}>
+                            <p style={{ fontSize: 12, color: '#4d6275', marginBottom: 16, lineHeight: 1.6 }}>
+                                We sent a verification code to <strong>{pendingEmail}</strong>. Enter it below to trust this device.
+                            </p>
+                            {deviceOtpError && (
+                                <div style={{ background: '#fee', border: '1px solid #fcc', color: '#c33', padding: '8px 12px', borderRadius: 4, fontSize: 12, marginBottom: 12 }}>
+                                    {deviceOtpError}
+                                </div>
+                            )}
+                            <div style={{ marginBottom: 12 }}>
+                                <label style={{ display: 'block', fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase', color: '#3d3d3f', marginBottom: 4 }}>
+                                    Verification Code
+                                </label>
+                                <input
+                                    type="text"
+                                    value={deviceOtp}
+                                    onChange={(e) => setDeviceOtp(e.target.value)}
+                                    placeholder="123456"
+                                    maxLength={6}
+                                    style={{ width: '100%', padding: '10px', fontSize: 20, border: '1px solid #a0a0a0', borderRadius: 3, background: '#fff', color: '#333', boxSizing: 'border-box', outline: 'none', textAlign: 'center', letterSpacing: 8, fontWeight: 'bold' }}
+                                />
+                            </div>
+                            <button
+                                onClick={handleDeviceVerify}
+                                disabled={deviceOtpLoading || deviceOtp.length < 6}
+                                style={{ width: '100%', padding: '10px', background: 'linear-gradient(to bottom, #47bfff 5%, #1a44c2 95%)', color: '#fff', border: 'none', borderRadius: 3, fontSize: 13, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1, cursor: 'pointer', opacity: deviceOtpLoading ? 0.6 : 1 }}
+                            >
+                                {deviceOtpLoading ? 'Verifying...' : 'Verify Device'}
+                            </button>
+                            <div style={{ textAlign: 'center', marginTop: 10 }}>
+                                <button
+                                    onClick={() => { setShowDeviceOtp(false); setDeviceOtp(''); setDeviceOtpError(''); }}
+                                    style={{ background: 'none', border: 'none', color: '#4a7fa5', fontSize: 12, cursor: 'pointer' }}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
+
     );
 }
