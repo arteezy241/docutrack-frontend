@@ -4,7 +4,7 @@ import { AppLayout } from "../components/Sidebar";
 import client from "../api/client";
 import useWindowWidth from "../hooks/useWindowWidth";
 import useAuthStore from "../store/authStore";
-import { useLocation } from 'react-router-dom';
+
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const triggerWorkflow = (id) => client.post("/workflow/trigger/" + id).then((r) => r.data);
