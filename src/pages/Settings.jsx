@@ -48,9 +48,27 @@ function TwoFactorSection() {
         if (!window.confirm("Remove this trusted device?")) return;
         try {
             await client.delete("/auth/trusted-devices/" + id);
+            const removed = devices.find(d => d.id === id);
+            if (removed?.deviceToken === localStorage.getItem('deviceToken')) {
+                localStorage.removeItem('deviceToken');
+            }
             setDevices(d => d.filter(dev => dev.id !== id));
         } catch {
             alert("Failed to remove device");
+        }
+    };
+
+    const currentDeviceToken = localStorage.getItem('deviceToken');
+    const isCurrentDeviceTrusted = devices.some(d => d.deviceToken === currentDeviceToken);
+
+    const trustCurrentDevice = async () => {
+        try {
+            const res = await client.post('/auth/trust-device');
+            localStorage.setItem('deviceToken', res.data.deviceToken);
+            const devicesRes = await client.get('/auth/trusted-devices');
+            setDevices(devicesRes.data);
+        } catch {
+            alert('Failed to trust device');
         }
     };
 
@@ -67,19 +85,43 @@ function TwoFactorSection() {
                 </span>
             </div>
 
+            {/* Trust current device */}
+            <div style={{ marginBottom: 16 }}>
+                {isCurrentDeviceTrusted ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.15)', borderRadius: 10 }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                        <span style={{ fontSize: 12, color: '#4ade80', fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>This device is trusted</span>
+                    </div>
+                ) : (
+                    <button
+                        onClick={trustCurrentDevice}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'rgba(71,191,255,0.06)', border: '1px solid rgba(71,191,255,0.2)', borderRadius: 10, cursor: 'pointer', width: '100%', fontFamily: "'Inter', sans-serif", transition: 'background 0.2s' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(71,191,255,0.1)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(71,191,255,0.06)'}
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#47bfff" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
+                        <span style={{ fontSize: 12, color: '#47bfff', fontWeight: 600 }}>Trust this device</span>
+                    </button>
+                )}
+            </div>
+
+            {/* Trusted devices list */}
             {devices.length > 0 && (
                 <div>
                     <p style={{ margin: "0 0 10px", fontSize: 10, fontWeight: 700, color: "var(--text-accent)", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Inter', sans-serif" }}>Trusted Devices</p>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                         {devices.map((dev) => (
-                            <div key={dev.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "var(--bg-input)", borderRadius: 10, border: "1px solid var(--border)" }}>
+                            <div key={dev.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "var(--bg-input)", borderRadius: 10, border: dev.deviceToken === currentDeviceToken ? "1px solid rgba(71,191,255,0.3)" : "1px solid var(--border)" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                    <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(71,191,255,0.1)", border: "1px solid rgba(71,191,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#47bfff" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
+                                    <div style={{ width: 32, height: 32, borderRadius: 8, background: dev.deviceToken === currentDeviceToken ? "rgba(71,191,255,0.1)" : "rgba(255,255,255,0.05)", border: dev.deviceToken === currentDeviceToken ? "1px solid rgba(71,191,255,0.2)" : "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={dev.deviceToken === currentDeviceToken ? "#47bfff" : "var(--text-muted)"} strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
                                     </div>
                                     <div>
                                         <p style={{ margin: 0, fontSize: 12, color: "var(--text-secondary)", fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>
                                             {dev.deviceName?.slice(0, 60) || "Unknown Device"}
+                                            {dev.deviceToken === currentDeviceToken && (
+                                                <span style={{ marginLeft: 8, fontSize: 10, color: '#47bfff', background: 'rgba(71,191,255,0.1)', padding: '1px 6px', borderRadius: 20, fontWeight: 600 }}>Current</span>
+                                            )}
                                         </p>
                                         <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--text-muted)", fontFamily: "'Inter', sans-serif" }}>
                                             Last used: {new Date(dev.lastUsedAt).toLocaleDateString()}

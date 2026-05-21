@@ -16,7 +16,7 @@ export default function Login() {
     const [pendingEmail, setPendingEmail] = useState('');
     const [deviceOtpLoading, setDeviceOtpLoading] = useState(false);
     const [deviceOtpError, setDeviceOtpError] = useState('');
-    const [trustDevice, setTrustDevice] = useState(false);
+    
     const { login } = useAuthStore();
     const navigate = useNavigate();
     const width = useWindowWidth();
@@ -53,9 +53,7 @@ export default function Login() {
                 otp: deviceOtp,
                 deviceName: navigator.userAgent.slice(0, 100),
             });
-            if (trustDevice) {
-                localStorage.setItem('deviceToken', res.data.deviceToken);
-            }
+            localStorage.setItem('deviceToken', res.data.deviceToken);
             login(res.data.token, res.data.user);
             registerPush();
             navigate('/', { replace: true });
@@ -362,15 +360,7 @@ export default function Login() {
                                     style={{ textAlign: 'center', letterSpacing: 10, fontSize: 22, fontWeight: 700 }}
                                 />
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, padding: '10px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.07)', cursor: 'pointer' }}
-                                onClick={() => setTrustDevice(!trustDevice)}>
-                                <div style={{ width: 18, height: 18, borderRadius: 5, border: '2px solid', borderColor: trustDevice ? '#47bfff' : 'rgba(255,255,255,0.2)', background: trustDevice ? '#47bfff' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0 }}>
-                                    {trustDevice && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>}
-                                </div>
-                                <label style={{ fontSize: 13, color: '#c6d4df', cursor: 'pointer', fontFamily: "'Inter', sans-serif" }}>
-                                    Trust this device
-                                </label>
-                            </div>
+                            
                             <button
                                 className="login-btn"
                                 onClick={handleDeviceVerify}
