@@ -8,6 +8,7 @@ const fetchUsers = () => client.get("/Users").then((r) => r.data);
 const fetchDepts = () => client.get("/Departments").then((r) => r.data);
 const assignDept = ({ id, departmentId }) => client.patch("/Users/" + id + "/department", { departmentId }).then((r) => r.data);
 const deleteUser = (id) => client.delete("/Users/" + id).then((r) => r.data);
+const reactivateUser = (id) => client.patch("/Users/" + id + "/reactivate").then((r) => r.data);
 
 const ROLES = ["Admin", "Staff", "Viewer"];
 
@@ -25,6 +26,10 @@ export default function Users() {
     const { data: users = [], isLoading } = useQuery({ queryKey: ["users"], queryFn: fetchUsers });
     const { data: depts = [] } = useQuery({ queryKey: ["departments"], queryFn: fetchDepts });
 
+    const reactivate = useMutation({
+        mutationFn: reactivateUser,
+        onSuccess: () => qc.invalidateQueries(["users"]),
+    });
     const assign = useMutation({
         mutationFn: assignDept,
         onSuccess: () => { qc.invalidateQueries(["users"]); setModal(false); },
@@ -223,7 +228,11 @@ export default function Users() {
                                         <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{deptName(u.departmentId)}</span>
                                         <div style={{ display: 'flex', gap: 4 }}>
                                             <button className="us-icon-btn" onClick={() => openAssign(u)}>Assign Dept</button>
-                                            <button className="us-icon-btn danger" onClick={() => { if (window.confirm('Remove user ' + displayName(u) + '?')) remove.mutate(u.id); }}>Remove</button>
+                                            {u.isActive ? (
+                                                <button className="us-icon-btn danger" onClick={() => { if (window.confirm('Deactivate ' + displayName(u) + '? They will no longer be able to log in.')) remove.mutate(u.id); }}>Deactivate</button>
+                                            ) : (
+                                                <button className="us-icon-btn success" onClick={() => { if (window.confirm('Reactivate ' + displayName(u) + '?')) reactivate.mutate(u.id); }}>Reactivate</button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -262,7 +271,16 @@ export default function Users() {
                                                             <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#47bfff,#4F46E5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0, boxShadow: '0 2px 6px rgba(79,70,229,0.25)' }}>
                                                                 {displayInitial(u)}
                                                             </div>
-                                                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{displayName(u)}</span>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                                <span style={{ fontSize: 13, fontWeight: 600, color: u.isActive ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                                                                    {displayName(u)}
+                                                                </span>
+                                                                {!u.isActive && (
+                                                                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20, background: 'rgba(248,113,113,0.1)', color: '#f87171' }}>
+                                                                        Inactive
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </td>
                                                     <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: 'var(--text-muted)', fontSize: 13 }}>{u.email}</td>
@@ -274,7 +292,11 @@ export default function Users() {
                                                     <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: 'var(--text-muted)', fontSize: 12 }}>{deptName(u.departmentId)}</td>
                                                     <td style={{ padding: '12px 16px', verticalAlign: 'middle', textAlign: 'right', whiteSpace: 'nowrap' }}>
                                                         <button className="us-icon-btn" onClick={() => openAssign(u)}>Assign Dept</button>
-                                                        <button className="us-icon-btn danger" onClick={() => { if (window.confirm('Remove user ' + displayName(u) + '?')) remove.mutate(u.id); }}>Remove</button>
+                                                        {u.isActive ? (
+                                                            <button className="us-icon-btn danger" onClick={() => { if (window.confirm('Deactivate ' + displayName(u) + '? They will no longer be able to log in.')) remove.mutate(u.id); }}>Deactivate</button>
+                                                        ) : (
+                                                            <button className="us-icon-btn success" onClick={() => { if (window.confirm('Reactivate ' + displayName(u) + '?')) reactivate.mutate(u.id); }}>Reactivate</button>
+                                                        )}
                                                     </td>
                                                 </tr>
                                             );
