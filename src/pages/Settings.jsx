@@ -191,13 +191,25 @@ export default function Settings() {
         setTimeout(() => setCopiedId(null), 2000);
     };
 
-    const handleSavePw = () => {
+    const handleSavePw = async () => {
         setPwError("");
         if (!pw.currentPassword || !pw.newPassword) { setPwError("All fields are required"); return; }
         if (pw.newPassword !== pw.confirm) { setPwError("Passwords do not match"); return; }
         if (pw.newPassword.length < 8) { setPwError("Password must be at least 8 characters"); return; }
-        setPwSuccess(true);
-        setTimeout(() => setPwSuccess(false), 3000);
+        if (!/[A-Z]/.test(pw.newPassword)) { setPwError("Password must contain at least one uppercase letter."); return; }
+        if (!/[a-z]/.test(pw.newPassword)) { setPwError("Password must contain at least one lowercase letter."); return; }
+        if (!/[0-9]/.test(pw.newPassword)) { setPwError("Password must contain at least one number."); return; }
+        try {
+            await client.post('/auth/change-password', {
+                currentPassword: pw.currentPassword,
+                newPassword: pw.newPassword,
+            });
+            setPwSuccess(true);
+            setPw({ currentPassword: "", newPassword: "", confirm: "" });
+            setTimeout(() => setPwSuccess(false), 3000);
+        } catch (err) {
+            setPwError(err.response?.data?.error || 'Failed to change password.');
+        }
     };
 
     const setP = (k) => (e) => setProfile((f) => ({ ...f, [k]: e.target.value }));
