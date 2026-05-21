@@ -4,6 +4,8 @@ import { AppLayout } from "../components/Sidebar";
 import client from "../api/client";
 import useWindowWidth from "../hooks/useWindowWidth";
 import useAuthStore from "../store/authStore";
+import { useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const triggerWorkflow = (id) => client.post("/workflow/trigger/" + id).then((r) => r.data);
 const fetchDocs = () => client.get("/Documents").then((r) => r.data);
@@ -42,9 +44,9 @@ export default function Documents() {
     const { user } = useAuthStore();
     const width = useWindowWidth();
     const isMobile = width < 768;
-
+    const location = useLocation();
     const [search, setSearch] = useState("");
-    const [filterStatus, setFS] = useState("All");
+    const [filterStatus, setFS] = useState(location.state?.filter || "All");
     const [modal, setModal] = useState(null);
     const [selected, setSelected] = useState(null);
     const [form, setForm] = useState(EMPTY_FORM);

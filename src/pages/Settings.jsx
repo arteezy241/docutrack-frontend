@@ -19,12 +19,13 @@ function TwoFactorSection() {
     const [devices, setDevices] = useState([]);
     const [loading, setLoading] = useState(true);
 
+
     useEffect(() => {
         const load = async () => {
             try {
                 const devicesRes = await client.get("/auth/trusted-devices");
                 setDevices(devicesRes.data);
-            } catch (_) {
+            } catch {
                 // ignore
             } finally {
                 setLoading(false);
@@ -152,7 +153,7 @@ function TwoFactorSection() {
 }
 
 export default function Settings() {
-    const { user } = useAuthStore();
+    const { user, setUser } = useAuthStore();
     const { isDark, toggleTheme } = useThemeStore();
     const qc = useQueryClient();
     const width = useWindowWidth();
@@ -167,6 +168,9 @@ export default function Settings() {
     const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || '');
     const [phoneSaving, setPhoneSaving] = useState(false);
     const [phoneSuccess, setPhoneSuccess] = useState(false);
+    const [profileSaving, setProfileSaving] = useState(false);
+    const [profileSuccess, setProfileSuccess] = useState(false);
+    const [profileError, setProfileError] = useState('');
     const [phoneError, setPhoneError] = useState('');
     const [pw, setPw] = useState({ currentPassword: "", newPassword: "", confirm: "" });
     const [pwError, setPwError] = useState("");
@@ -213,6 +217,24 @@ export default function Settings() {
     };
 
     const setP = (k) => (e) => setProfile((f) => ({ ...f, [k]: e.target.value }));
+    const handleSaveProfile = async () => {
+        setProfileSaving(true);
+        setProfileError('');
+        setProfileSuccess(false);
+        try {
+            const res = await client.patch('/Users/profile', {
+                fullName: `${profile.firstName} ${profile.lastName}`.trim() || displayName,
+                username: user?.username || '',
+            });
+            setUser({ ...user, fullName: res.data.fullName, username: res.data.username });
+            setProfileSuccess(true);
+            setTimeout(() => setProfileSuccess(false), 3000);
+        } catch (err) {
+            setProfileError(err.response?.data?.error || 'Failed to save profile.');
+        } finally {
+            setProfileSaving(false);
+        }
+    };
     const setPwF = (k) => (e) => setPw((f) => ({ ...f, [k]: e.target.value }));
 
     const displayName = user?.firstName
@@ -352,7 +374,13 @@ export default function Settings() {
                                 {phoneSuccess && <div style={{ marginTop: 8, padding: '10px 14px', background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.25)', borderRadius: 8, color: '#4ade80', fontSize: 13 }}>Phone number saved</div>}
                                 {phoneError && <div style={{ marginTop: 8, padding: '10px 14px', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: 8, color: '#f87171', fontSize: 13 }}>{phoneError}</div>}
                             </div>
-                            <p style={{ color: 'var(--text-muted)', fontSize: 12, margin: '14px 0 0' }}>Profile editing coming soon via API.</p>
+                            {profileError && <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: 8, color: '#f87171', fontSize: 13 }}>{profileError}</div>}
+                            {profileSuccess && <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.25)', borderRadius: 8, color: '#4ade80', fontSize: 13 }}>Profile saved successfully.</div>}
+                            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+                                <button className="st-primary-btn" onClick={handleSaveProfile} disabled={profileSaving}>
+                                    {profileSaving ? 'Saving...' : 'Save Profile'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}

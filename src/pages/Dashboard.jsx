@@ -14,10 +14,10 @@ const statusMap = {
 };
 
 const statConfig = [
-    { label: 'Total Documents', key: 'total', color: '#47bfff', glow: 'rgba(71,191,255,0.15)', icon: <DocIcon /> },
-    { label: 'Under Review', key: 'review', color: '#f59e0b', glow: 'rgba(245,158,11,0.15)', icon: <ClockIcon /> },
-    { label: 'Approved', key: 'approved', color: '#4ade80', glow: 'rgba(74,222,128,0.15)', icon: <CheckIcon /> },
-    { label: 'Rejected', key: 'rejected', color: '#f87171', glow: 'rgba(248,113,113,0.15)', icon: <XIcon /> },
+    { label: 'Total Documents', key: 'total', color: '#47bfff', glow: 'rgba(71,191,255,0.15)', icon: <DocIcon />, filter: 'All' },
+    { label: 'Under Review', key: 'review', color: '#f59e0b', glow: 'rgba(245,158,11,0.15)', icon: <ClockIcon />, filter: 'InReview' },
+    { label: 'Approved', key: 'approved', color: '#4ade80', glow: 'rgba(74,222,128,0.15)', icon: <CheckIcon />, filter: 'Approved' },
+    { label: 'Rejected', key: 'rejected', color: '#f87171', glow: 'rgba(248,113,113,0.15)', icon: <XIcon />, filter: 'Rejected' },
 ];
 
 export default function Dashboard() {
@@ -169,8 +169,13 @@ export default function Dashboard() {
                     gap: 14,
                     marginBottom: 28,
                 }}>
-                    {statConfig.map(({ label, key, color, glow, icon }, i) => (
-                        <div key={key} className="stat-card" style={{ animationDelay: `${i * 0.07}s`, boxShadow: `0 4px 20px ${glow}` }}>
+                    {statConfig.map(({ label, key, color, glow, icon, filter }, i) => (
+                        <div
+                            key={key}
+                            className="stat-card"
+                            style={{ animationDelay: `${i * 0.07}s`, boxShadow: `0 4px 20px ${glow}`, cursor: 'pointer' }}
+                            onClick={() => navigate('/documents', { state: { filter } })}
+                        >
                             <div>
                                 <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.05em', marginBottom: 8, textTransform: 'uppercase' }}>
                                     {label}
