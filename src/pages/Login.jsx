@@ -97,6 +97,9 @@ export default function Login() {
     const handleForgotReset = async () => {
         setForgotError('');
         if (forgotNewPass.length < 8) { setForgotError('Password must be at least 8 characters.'); return; }
+        if (!/[A-Z]/.test(forgotNewPass)) { setForgotError('Password must contain at least one uppercase letter.'); return; }
+        if (!/[a-z]/.test(forgotNewPass)) { setForgotError('Password must contain at least one lowercase letter.'); return; }
+        if (!/[0-9]/.test(forgotNewPass)) { setForgotError('Password must contain at least one number.'); return; }
         if (forgotNewPass !== forgotConfirmPass) { setForgotError('Passwords do not match.'); return; }
         setForgotLoading(true);
         try {
@@ -433,6 +436,15 @@ export default function Login() {
                                     <p style={{ fontSize: 13, color: '#8f98a0', marginBottom: 16, lineHeight: 1.6 }}>
                                         Choose a new password for your account.
                                     </p>
+                                    <div style={{ padding: '10px 12px', background: 'rgba(71,191,255,0.06)', border: '1px solid rgba(71,191,255,0.15)', borderRadius: 8, marginBottom: 16 }}>
+                                        <p style={{ margin: 0, fontSize: 11, color: '#47bfff', fontWeight: 600, marginBottom: 4 }}>Password requirements:</p>
+                                        <p style={{ margin: 0, fontSize: 11, color: '#8f98a0', lineHeight: 1.6 }}>
+                                            • At least 8 characters<br />
+                                            • One uppercase letter (A-Z)<br />
+                                            • One lowercase letter (a-z)<br />
+                                            • One number (0-9)
+                                        </p>
+                                    </div>
                                     <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 6, letterSpacing: 0.8 }}>New Password</label>
                                     <input className="login-input" type="password" value={forgotNewPass} onChange={(e) => setForgotNewPass(e.target.value)} placeholder="Min 8 characters" style={{ marginBottom: 12 }} />
                                     <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 6, letterSpacing: 0.8 }}>Confirm Password</label>
