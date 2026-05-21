@@ -138,6 +138,25 @@ export default function Login() {
                 @keyframes fadeIn {
                     from { opacity: 0; }
                     to { opacity: 1; }
+                @keyframes blob1 {
+                    0%, 100% { transform: translate(0, 0) scale(1); }
+                    33% { transform: translate(40px, -30px) scale(1.1); }
+                    66% { transform: translate(-20px, 20px) scale(0.95); }
+                }
+                @keyframes blob2 {
+                    0%, 100% { transform: translate(0, 0) scale(1); }
+                    33% { transform: translate(-50px, 30px) scale(1.05); }
+                    66% { transform: translate(30px, -40px) scale(1.1); }
+                }
+                @keyframes blob3 {
+                    0%, 100% { transform: translate(0, 0) scale(1); }
+                    33% { transform: translate(30px, -20px) scale(0.95); }
+                    66% { transform: translate(-40px, 30px) scale(1.05); }
+                }
+                @keyframes blob4 {
+                    0%, 100% { transform: translate(0, 0) scale(1); }
+                    50% { transform: translate(-30px, -40px) scale(1.15); }
+                }
                 }
                 .login-input {
                     width: 100%; padding: 10px 12px;
@@ -223,8 +242,12 @@ export default function Login() {
 
             {/* Hero */}
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '32px 16px' : '48px 24px', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: -120, left: -120, width: 500, height: 500, borderRadius: '50%', background: '#4F46E5', opacity: 0.12, filter: 'blur(100px)', pointerEvents: 'none' }} />
-                <div style={{ position: 'absolute', bottom: -120, right: -120, width: 500, height: 500, borderRadius: '50%', background: '#47bfff', opacity: 0.08, filter: 'blur(100px)', pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', top: '-20%', left: '-10%', width: 600, height: 600, borderRadius: '50%', background: '#4F46E5', opacity: 0.15, filter: 'blur(120px)', animation: 'blob1 8s ease-in-out infinite' }} />
+                    <div style={{ position: 'absolute', top: '30%', right: '-10%', width: 500, height: 500, borderRadius: '50%', background: '#47bfff', opacity: 0.12, filter: 'blur(100px)', animation: 'blob2 10s ease-in-out infinite' }} />
+                    <div style={{ position: 'absolute', bottom: '-10%', left: '30%', width: 550, height: 550, borderRadius: '50%', background: '#7c3aed', opacity: 0.1, filter: 'blur(110px)', animation: 'blob3 12s ease-in-out infinite' }} />
+                    <div style={{ position: 'absolute', top: '10%', right: '20%', width: 300, height: 300, borderRadius: '50%', background: '#06b6d4', opacity: 0.08, filter: 'blur(80px)', animation: 'blob4 9s ease-in-out infinite' }} />
+                </div>
 
                 <div style={{ display: 'flex', gap: isMobile ? 0 : 48, alignItems: isMobile ? 'stretch' : 'flex-start', position: 'relative', zIndex: 1, flexDirection: isMobile ? 'column' : 'row', width: isMobile ? '100%' : 'auto', maxWidth: isMobile ? 440 : 'none' }}>
 
