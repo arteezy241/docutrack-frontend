@@ -89,7 +89,7 @@ function TwoFactorSection() {
             <div style={{ marginBottom: 16 }}>
                 {isCurrentDeviceTrusted ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.15)', borderRadius: 10 }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                         <span style={{ fontSize: 12, color: '#4ade80', fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>This device is trusted</span>
                     </div>
                 ) : (
@@ -99,7 +99,7 @@ function TwoFactorSection() {
                         onMouseEnter={e => e.currentTarget.style.background = 'rgba(71,191,255,0.1)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'rgba(71,191,255,0.06)'}
                     >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#47bfff" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#47bfff" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                         <span style={{ fontSize: 12, color: '#47bfff', fontWeight: 600 }}>Trust this device</span>
                     </button>
                 )}
@@ -114,7 +114,7 @@ function TwoFactorSection() {
                             <div key={dev.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "var(--bg-input)", borderRadius: 10, border: dev.deviceToken === currentDeviceToken ? "1px solid rgba(71,191,255,0.3)" : "1px solid var(--border)" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                                     <div style={{ width: 32, height: 32, borderRadius: 8, background: dev.deviceToken === currentDeviceToken ? "rgba(71,191,255,0.1)" : "rgba(255,255,255,0.05)", border: dev.deviceToken === currentDeviceToken ? "1px solid rgba(71,191,255,0.2)" : "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={dev.deviceToken === currentDeviceToken ? "#47bfff" : "var(--text-muted)"} strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={dev.deviceToken === currentDeviceToken ? "#47bfff" : "var(--text-muted)"} strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                                     </div>
                                     <div>
                                         <p style={{ margin: 0, fontSize: 12, color: "var(--text-secondary)", fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>
