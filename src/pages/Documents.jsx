@@ -103,7 +103,9 @@ export default function Documents() {
 
     const filtered = docs.filter((d) => {
         const matchSearch = (d.title?.toLowerCase().includes(search.toLowerCase())) || (d.type?.toLowerCase().includes(search.toLowerCase()));
-        const matchStatus = filterStatus === "All" || d.status === filterStatus;
+        const matchStatus = filterStatus === "All" ||
+            d.status === STATUS_MAP[filterStatus] ||
+            d.status === filterStatus;
         return matchSearch && matchStatus;
     });
 
