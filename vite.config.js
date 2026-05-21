@@ -7,4 +7,9 @@ export default defineConfig({
         react(),
         tailwindcss(),
     ],
+    server: {
+        headers: {
+            'Service-Worker-Allowed': '/',
+        },
+    },
 })

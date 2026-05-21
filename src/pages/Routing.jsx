@@ -16,16 +16,16 @@ const rejectRoute = ({ documentId, eventId, reason }) =>
     client.patch("/Documents/" + documentId + "/routing/" + eventId + "/reject", { reason }).then((r) => r.data);
 
 const STATUS_COLORS = {
-    0: { bg: "rgba(255,255,255,0.06)", color: "#8f98a0" },
+    0: { bg: "rgba(143,152,160,0.12)", color: "#8f98a0" },
     1: { bg: "rgba(245,158,11,0.15)", color: "#f59e0b" },
     2: { bg: "rgba(74,222,128,0.12)", color: "#4ade80" },
-    3: { bg: "rgba(201,64,64,0.12)", color: "#c94040" },
-    4: { bg: "rgba(79,70,229,0.15)", color: "#818cf8" },
+    3: { bg: "rgba(248,113,113,0.12)", color: "#f87171" },
+    4: { bg: "rgba(129,140,248,0.12)", color: "#818cf8" },
     Approved: { bg: "rgba(74,222,128,0.12)", color: "#4ade80" },
-    Rejected: { bg: "rgba(201,64,64,0.12)", color: "#c94040" },
+    Rejected: { bg: "rgba(248,113,113,0.12)", color: "#f87171" },
     InReview: { bg: "rgba(245,158,11,0.15)", color: "#f59e0b" },
-    Draft: { bg: "rgba(255,255,255,0.06)", color: "#8f98a0" },
-    Archived: { bg: "rgba(79,70,229,0.15)", color: "#818cf8" },
+    Draft: { bg: "rgba(143,152,160,0.12)", color: "#8f98a0" },
+    Archived: { bg: "rgba(129,140,248,0.12)", color: "#818cf8" },
 };
 
 const STATUS_LABELS = {
@@ -51,7 +51,6 @@ export default function Routing() {
 
     const { data: documents = [] } = useQuery({ queryKey: ["documents"], queryFn: fetchDocuments });
     const { data: users = [] } = useQuery({ queryKey: ["users"], queryFn: fetchUsers });
-
     const { data: events = [], isLoading } = useQuery({
         queryKey: ["routing", selDocId],
         queryFn: () => fetchRouting(selDocId),
@@ -69,15 +68,10 @@ export default function Routing() {
             setForm(EMPTY);
         },
     });
-
     const approve = useMutation({
         mutationFn: approveRoute,
-        onSuccess: () => {
-            qc.invalidateQueries(["routing", selDocId]);
-            qc.invalidateQueries(["documents"]);
-        },
+        onSuccess: () => { qc.invalidateQueries(["routing", selDocId]); qc.invalidateQueries(["documents"]); },
     });
-
     const reject = useMutation({
         mutationFn: rejectRoute,
         onSuccess: () => {
@@ -91,105 +85,211 @@ export default function Routing() {
     const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
     const filteredDocs = documents.filter((d) =>
-        d.title && d.title.toLowerCase().includes(search.toLowerCase())
+        d.title?.toLowerCase().includes(search.toLowerCase())
     );
 
     const userName = (id) => {
         if (!id) return "System";
-        const u = users.find((u) =>
-            (u.id || u.Id || "").toString().toLowerCase() === id.toString().toLowerCase()
-        );
+        const u = users.find((u) => (u.id || u.Id || "").toString().toLowerCase() === id.toString().toLowerCase());
         if (!u) return "Deleted User";
-        if (u.firstName || u.lastName) return (u.firstName + " " + u.lastName).trim();
-        if (u.fullName) return u.fullName;
-        return u.email || "Unknown";
+        return u.fullName || (u.firstName && u.lastName ? (u.firstName + " " + u.lastName).trim() : u.email) || "Unknown";
     };
 
-    const currentUserId = user?.id || user?.Id || user?.nameid ||
-        user?.["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"];
-
-    const isRecipient = (ev) =>
-        ev.toUserId && currentUserId &&
-        ev.toUserId.toString().toLowerCase() === currentUserId.toString().toLowerCase();
-
+    const currentUserId = user?.id || user?.Id;
+    const isRecipient = (ev) => ev.toUserId && currentUserId && ev.toUserId.toString().toLowerCase() === currentUserId.toString().toLowerCase();
     const canActOn = (ev) => {
         const status = ev.statusAfter ?? ev.status;
-        const alreadyActed = status === "Approved" || status === "Rejected" ||
-            status === 2 || status === 3;
-        return isRecipient(ev) && !alreadyActed;
+        return isRecipient(ev) && status !== "Approved" && status !== "Rejected" && status !== 2 && status !== 3;
     };
 
     const routingEvents = events.filter(ev => ev.toUserId != null);
     const statusEvents = events.filter(ev => ev.toUserId == null);
+    const selectedDoc = documents.find((d) => d.id === selDocId);
 
     return (
         <AppLayout>
-            <div style={s.page}>
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+                @keyframes dtSpin { to { transform: rotate(360deg); } }
+                @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+                .rt-primary-btn {
+                    padding: 9px 18px;
+                    background: linear-gradient(135deg, #47bfff, #4F46E5);
+                    border: none; border-radius: 10px; color: #fff;
+                    font-size: 13px; font-weight: 600; cursor: pointer;
+                    font-family: 'Inter', sans-serif;
+                    transition: opacity 0.2s, transform 0.2s;
+                    box-shadow: 0 4px 12px rgba(79,70,229,0.3);
+                    white-space: nowrap;
+                }
+                .rt-primary-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+                .rt-primary-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+                .rt-ghost-btn {
+                    padding: 9px 18px; background: transparent;
+                    border: 1px solid var(--border-input);
+                    border-radius: 10px; color: var(--text-muted);
+                    font-size: 13px; cursor: pointer;
+                    font-family: 'Inter', sans-serif;
+                    transition: background 0.2s, color 0.2s;
+                }
+                .rt-ghost-btn:hover { background: var(--bg-hover); color: var(--text-secondary); }
+                .rt-reject-btn {
+                    padding: 9px 18px;
+                    background: linear-gradient(135deg, #c94040, #8b0000);
+                    border: none; border-radius: 10px; color: #fff;
+                    font-size: 13px; font-weight: 600; cursor: pointer;
+                    font-family: 'Inter', sans-serif; transition: opacity 0.2s;
+                }
+                .rt-reject-btn:hover { opacity: 0.9; }
+                .rt-reject-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+                .rt-search {
+                    padding: 9px 14px 9px 38px;
+                    background: var(--bg-input);
+                    border: 1px solid var(--border);
+                    border-radius: 10px; color: var(--text-secondary);
+                    font-size: 13px; outline: none;
+                    font-family: 'Inter', sans-serif;
+                    transition: border-color 0.2s, background 0.2s;
+                    box-sizing: border-box; width: 100%;
+                }
+                .rt-search:focus { border-color: rgba(71,191,255,0.4); background: var(--bg-hover); }
+                .rt-search::placeholder { color: var(--text-accent); }
+                .doc-chip {
+                    padding: 7px 14px;
+                    background: var(--bg-input);
+                    border: 1px solid var(--border);
+                    border-radius: 10px; font-size: 12px;
+                    color: var(--text-muted); cursor: pointer;
+                    font-family: 'Inter', sans-serif; font-weight: 500;
+                    transition: all 0.2s; white-space: nowrap;
+                }
+                .doc-chip:hover { background: var(--bg-hover); color: var(--text-secondary); border-color: var(--border-input); }
+                .doc-chip.active { background: rgba(79,70,229,0.2); border-color: rgba(79,70,229,0.5); color: #818cf8; }
+                .rt-row { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+                .rt-row:hover { background: var(--bg-hover); }
+                .rt-row:last-child { border-bottom: none; }
+                .approve-btn {
+                    padding: 5px 12px;
+                    background: rgba(74,222,128,0.1);
+                    border: 1px solid rgba(74,222,128,0.25);
+                    border-radius: 8px; color: #4ade80;
+                    font-size: 12px; font-weight: 600; cursor: pointer;
+                    font-family: 'Inter', sans-serif; transition: background 0.2s;
+                }
+                .approve-btn:hover { background: rgba(74,222,128,0.18); }
+                .approve-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+                .reject-action-btn {
+                    padding: 5px 12px;
+                    background: rgba(248,113,113,0.1);
+                    border: 1px solid rgba(248,113,113,0.25);
+                    border-radius: 8px; color: #f87171;
+                    font-size: 12px; font-weight: 600; cursor: pointer;
+                    font-family: 'Inter', sans-serif; transition: background 0.2s;
+                }
+                .reject-action-btn:hover { background: rgba(248,113,113,0.18); }
+                .modal-overlay {
+                    position: fixed; inset: 0;
+                    background: rgba(0,0,0,0.7);
+                    backdrop-filter: blur(8px);
+                    -webkit-backdrop-filter: blur(8px);
+                    display: flex; align-items: center; justify-content: center;
+                    z-index: 100; padding: 20px;
+                }
+                .modal-box {
+                    background: var(--modal-bg);
+                    border: 1px solid var(--border);
+                    border-radius: 16px; width: 100%;
+                    max-width: 460px; max-height: 90vh;
+                    display: flex; flex-direction: column;
+                    box-shadow: 0 24px 48px rgba(0,0,0,0.4);
+                    animation: fadeUp 0.2s ease;
+                }
+                .modal-close-btn {
+                    background: var(--bg-input); border: none;
+                    color: var(--text-muted); width: 28px; height: 28px;
+                    border-radius: 50%; cursor: pointer;
+                    display: flex; align-items: center; justify-content: center;
+                    font-size: 14px; transition: background 0.2s, color 0.2s;
+                }
+                .modal-close-btn:hover { background: var(--bg-hover); color: var(--text-secondary); }
+                .rt-input {
+                    width: 100%; padding: 9px 12px;
+                    background: var(--bg-input);
+                    border: 1px solid var(--border-input);
+                    border-radius: 8px; color: var(--text-secondary);
+                    font-size: 13px; outline: none;
+                    box-sizing: border-box;
+                    font-family: 'Inter', sans-serif;
+                    transition: border-color 0.2s;
+                }
+                .rt-input:focus { border-color: rgba(71,191,255,0.4); }
+            `}</style>
 
-                <div style={{ ...s.pageHeader, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 12 : 0 }}>
+            <div style={{ padding: isMobile ? '20px 16px' : '28px 28px', color: 'var(--text-secondary)', fontFamily: "'Inter', sans-serif" }}>
+
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', flexDirection: isMobile ? 'column' : 'row', gap: 12, marginBottom: 24, animation: 'fadeUp 0.3s ease both' }}>
                     <div>
-                        <h1 style={s.pageTitle}>Routing</h1>
-                        <p style={s.pageSub}>Route documents between users and track history</p>
+                        <h1 style={{ margin: 0, fontSize: isMobile ? 22 : 26, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Routing</h1>
+                        <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>Route documents between users and track history</p>
                     </div>
-                    <button onClick={() => { setForm(EMPTY); setModal(true); }} style={s.primaryBtn}>
+                    <button className="rt-primary-btn" onClick={() => { setForm(EMPTY); setModal(true); }}>
                         + Route Document
                     </button>
                 </div>
 
                 {/* Document selector */}
-                <div style={s.docSelector}>
-                    <p style={s.sectionLabel}>SELECT A DOCUMENT TO VIEW ROUTING HISTORY</p>
-                    <input
-                        style={{ ...s.searchInput, width: "100%", marginBottom: 12, boxSizing: "border-box" }}
-                        placeholder="Search documents..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-                    <div style={{ ...s.docList, flexDirection: isMobile ? "column" : "row" }}>
+                <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, padding: 20, marginBottom: 20, animation: 'fadeUp 0.35s ease both' }}>
+                    <p style={{ margin: '0 0 12px', fontSize: 10, fontWeight: 700, color: 'var(--text-accent)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                        Select a document to view routing history
+                    </p>
+                    <div style={{ position: 'relative', marginBottom: 14 }}>
+                        <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-accent)', pointerEvents: 'none' }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                        </span>
+                        <input className="rt-search" placeholder="Search documents..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                         {filteredDocs.length === 0 ? (
-                            <p style={{ color: "#8f98a0", fontSize: 13, padding: "12px 0", margin: 0 }}>No documents found</p>
-                        ) : (
-                            filteredDocs.map((doc) => (
-                                <div
-                                    key={doc.id}
-                                    onClick={() => setSelDocId(doc.id)}
-                                    style={{
-                                        ...s.docChip,
-                                        ...(selDocId === doc.id ? s.docChipActive : {}),
-                                        width: isMobile ? "100%" : "auto",
-                                    }}
-                                >
-                                    {doc.title}
-                                </div>
-                            ))
-                        )}
+                            <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: 0 }}>No documents found</p>
+                        ) : filteredDocs.map((doc) => (
+                            <div key={doc.id} className={`doc-chip${selDocId === doc.id ? ' active' : ''}`} onClick={() => setSelDocId(doc.id)}>
+                                {doc.title}
+                            </div>
+                        ))}
                     </div>
                 </div>
 
                 {/* Routing history */}
                 {selDocId && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, animation: 'fadeUp 0.4s ease both' }}>
 
-                        {/* Routing Events table */}
-                        <div style={s.tableWrap}>
-                            <div style={s.tableHeader}>
-                                <span style={s.tableTitle}>
-                                    Routing history — {documents.find((d) => d.id === selDocId)?.title}
-                                </span>
+                        {/* Routing events */}
+                        <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border)', overflow: 'hidden' }}>
+                            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Routing History</span>
+                                {selectedDoc && (
+                                    <span style={{ fontSize: 11, color: 'var(--text-accent)', background: 'rgba(74,127,165,0.12)', padding: '2px 8px', borderRadius: 20, fontWeight: 600 }}>
+                                        {selectedDoc.title}
+                                    </span>
+                                )}
                             </div>
                             {isLoading ? (
-                                <div style={s.centered}><Spinner /></div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48 }}><Spinner /></div>
                             ) : routingEvents.length === 0 ? (
-                                <div style={s.centered}>
-                                    <p style={{ color: "#8f98a0" }}>No routing events for this document</p>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 48, gap: 8 }}>
+                                    <div style={{ fontSize: 28, opacity: 0.3 }}>📋</div>
+                                    <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: 13 }}>No routing events for this document</p>
                                 </div>
                             ) : (
-                                <div style={{ overflowX: "auto" }}>
-                                    <table style={s.table}>
+                                <div style={{ overflowX: 'auto' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                         <thead>
-                                            <tr>
-                                                {["Routed To", "Note", "Status", "Date", "Action"].map((h) => (
-                                                    <th key={h} style={s.th}>{h}</th>
+                                            <tr style={{ background: 'var(--table-head)' }}>
+                                                {['Routed To', 'Note', 'Status', 'Date', 'Action'].map((h) => (
+                                                    <th key={h} style={{ padding: '11px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-accent)', letterSpacing: '0.07em', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
+                                                        {h}
+                                                    </th>
                                                 ))}
                                             </tr>
                                         </thead>
@@ -199,52 +299,34 @@ export default function Routing() {
                                                 const sc = STATUS_COLORS[status] || STATUS_COLORS[0];
                                                 const label = STATUS_LABELS[status] || String(status);
                                                 return (
-                                                    <tr
-                                                        key={ev.id}
-                                                        style={s.tr}
-                                                        onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
-                                                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                                    >
-                                                        <td style={s.td}>
-                                                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                                                <div style={s.miniAvatar}>
-                                                                    {(userName(ev.toUserId)?.[0] || "?").toUpperCase()}
+                                                    <tr key={ev.id} className="rt-row">
+                                                        <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                                <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#47bfff,#4F46E5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 10, fontWeight: 700, flexShrink: 0, boxShadow: '0 2px 6px rgba(79,70,229,0.3)' }}>
+                                                                    {(userName(ev.toUserId)?.[0] || '?').toUpperCase()}
                                                                 </div>
-                                                                <span style={{ whiteSpace: "nowrap" }}>{userName(ev.toUserId)}</span>
+                                                                <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500, whiteSpace: 'nowrap' }}>{userName(ev.toUserId)}</span>
                                                             </div>
                                                         </td>
-                                                        <td style={{ ...s.td, color: "#8f98a0", fontSize: 12 }}>
-                                                            {ev.note || ev.notes || "—"}
+                                                        <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: 'var(--text-muted)', fontSize: 12 }}>
+                                                            {ev.note || ev.notes || '—'}
                                                         </td>
-                                                        <td style={s.td}>
-                                                            <span style={{ ...s.pill, background: sc.bg, color: sc.color, whiteSpace: "nowrap" }}>
+                                                        <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                                                            <span style={{ background: sc.bg, color: sc.color, padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>
                                                                 {label}
                                                             </span>
                                                         </td>
-                                                        <td style={{ ...s.td, color: "#8f98a0", fontSize: 12, whiteSpace: "nowrap" }}>
-                                                            {ev.timestamp || ev.createdAt
-                                                                ? new Date(ev.timestamp || ev.createdAt).toLocaleDateString()
-                                                                : "—"}
+                                                        <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: 'var(--text-muted)', fontSize: 12, whiteSpace: 'nowrap' }}>
+                                                            {ev.timestamp || ev.createdAt ? new Date(ev.timestamp || ev.createdAt).toLocaleDateString() : '—'}
                                                         </td>
-                                                        <td style={{ ...s.td, whiteSpace: "nowrap" }}>
+                                                        <td style={{ padding: '12px 16px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                                                             {canActOn(ev) ? (
-                                                                <div style={{ display: "flex", gap: 6 }}>
-                                                                    <button
-                                                                        style={s.approveBtn}
-                                                                        disabled={approve.isPending}
-                                                                        onClick={() => approve.mutate({ documentId: selDocId, eventId: ev.id })}
-                                                                    >
-                                                                        Approve
-                                                                    </button>
-                                                                    <button
-                                                                        style={s.rejectBtn}
-                                                                        onClick={() => { setRejectModal(ev); setRejectReason(""); }}
-                                                                    >
-                                                                        Reject
-                                                                    </button>
+                                                                <div style={{ display: 'flex', gap: 6 }}>
+                                                                    <button className="approve-btn" disabled={approve.isPending} onClick={() => approve.mutate({ documentId: selDocId, eventId: ev.id })}>Approve</button>
+                                                                    <button className="reject-action-btn" onClick={() => { setRejectModal(ev); setRejectReason(''); }}>Reject</button>
                                                                 </div>
                                                             ) : (
-                                                                <span style={{ color: "#8f98a0", fontSize: 12 }}>—</span>
+                                                                <span style={{ color: 'var(--text-accent)', fontSize: 12 }}>—</span>
                                                             )}
                                                         </td>
                                                     </tr>
@@ -256,18 +338,20 @@ export default function Routing() {
                             )}
                         </div>
 
-                        {/* Status Change History table — only shown if there are status events */}
+                        {/* Status change history */}
                         {statusEvents.length > 0 && (
-                            <div style={s.tableWrap}>
-                                <div style={s.tableHeader}>
-                                    <span style={s.tableTitle}>Status change history</span>
+                            <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border)', overflow: 'hidden' }}>
+                                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+                                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Status Change History</span>
                                 </div>
-                                <div style={{ overflowX: "auto" }}>
-                                    <table style={s.table}>
+                                <div style={{ overflowX: 'auto' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                         <thead>
-                                            <tr>
-                                                {["Status Changed To", "Date"].map((h) => (
-                                                    <th key={h} style={s.th}>{h}</th>
+                                            <tr style={{ background: 'var(--table-head)' }}>
+                                                {['Status Changed To', 'Date'].map((h) => (
+                                                    <th key={h} style={{ padding: '11px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-accent)', letterSpacing: '0.07em', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
+                                                        {h}
+                                                    </th>
                                                 ))}
                                             </tr>
                                         </thead>
@@ -277,21 +361,14 @@ export default function Routing() {
                                                 const sc = STATUS_COLORS[status] || STATUS_COLORS[0];
                                                 const label = STATUS_LABELS[status] || String(status);
                                                 return (
-                                                    <tr
-                                                        key={ev.id}
-                                                        style={s.tr}
-                                                        onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
-                                                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                                    >
-                                                        <td style={s.td}>
-                                                            <span style={{ ...s.pill, background: sc.bg, color: sc.color }}>
+                                                    <tr key={ev.id} className="rt-row">
+                                                        <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                                                            <span style={{ background: sc.bg, color: sc.color, padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>
                                                                 {label}
                                                             </span>
                                                         </td>
-                                                        <td style={{ ...s.td, color: "#8f98a0", fontSize: 12, whiteSpace: "nowrap" }}>
-                                                            {ev.timestamp || ev.createdAt
-                                                                ? new Date(ev.timestamp || ev.createdAt).toLocaleString()
-                                                                : "—"}
+                                                        <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: 'var(--text-muted)', fontSize: 12, whiteSpace: 'nowrap' }}>
+                                                            {ev.timestamp || ev.createdAt ? new Date(ev.timestamp || ev.createdAt).toLocaleString() : '—'}
                                                         </td>
                                                     </tr>
                                                 );
@@ -301,145 +378,84 @@ export default function Routing() {
                                 </div>
                             </div>
                         )}
-
                     </div>
                 )}
-
             </div>
 
             {/* Route modal */}
             {modal && (
-                <Modal title="Route Document" onClose={() => { setModal(false); setForm(EMPTY); }} isMobile={isMobile}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                        <Field label="Document *">
-                            <select style={s.input} value={form.documentId} onChange={set("documentId")}>
-                                <option value="">Select a document...</option>
-                                {documents.map((d) => <option key={d.id} value={d.id}>{d.title}</option>)}
-                            </select>
-                        </Field>
-                        <Field label="Route To *">
-                            <select style={s.input} value={form.toUserId} onChange={set("toUserId")}>
-                                <option value="">Select a user...</option>
-                                {users.map((u) => (
-                                    <option key={u.id || u.Id} value={u.id || u.Id}>
-                                        {u.firstName && u.lastName
-                                            ? (u.firstName + " " + u.lastName).trim()
-                                            : u.fullName || u.email}
-                                    </option>
-                                ))}
-                            </select>
-                        </Field>
-                        <Field label="Notes">
-                            <textarea
-                                style={{ ...s.input, height: 70, resize: "vertical" }}
-                                value={form.notes}
-                                onChange={set("notes")}
-                                placeholder="Optional instructions..."
-                            />
-                        </Field>
-                        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 4 }}>
-                            <button style={s.ghostBtn} onClick={() => { setModal(false); setForm(EMPTY); }}>Cancel</button>
-                            <button
-                                style={s.primaryBtn}
-                                disabled={!form.documentId || !form.toUserId || create.isPending}
-                                onClick={() => create.mutate(form)}
-                            >
-                                {create.isPending ? "Routing..." : "Route"}
-                            </button>
+                <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setModal(false)}>
+                    <div className="modal-box">
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', borderBottom: '1px solid var(--border)' }}>
+                            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', fontFamily: "'Inter', sans-serif" }}>Route Document</h2>
+                            <button className="modal-close-btn" onClick={() => setModal(false)}>✕</button>
+                        </div>
+                        <div style={{ padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14, fontFamily: "'Inter', sans-serif" }}>
+                            <Field label="Document *">
+                                <select className="rt-input" value={form.documentId} onChange={set('documentId')}>
+                                    <option value="">Select a document...</option>
+                                    {documents.map((d) => <option key={d.id} value={d.id}>{d.title}</option>)}
+                                </select>
+                            </Field>
+                            <Field label="Route To *">
+                                <select className="rt-input" value={form.toUserId} onChange={set('toUserId')}>
+                                    <option value="">Select a user...</option>
+                                    {users.map((u) => (
+                                        <option key={u.id || u.Id} value={u.id || u.Id}>
+                                            {u.fullName || (u.firstName && u.lastName ? (u.firstName + ' ' + u.lastName).trim() : u.email)}
+                                        </option>
+                                    ))}
+                                </select>
+                            </Field>
+                            <Field label="Notes">
+                                <textarea className="rt-input" style={{ height: 70, resize: 'vertical' }} value={form.notes} onChange={set('notes')} placeholder="Optional instructions..." />
+                            </Field>
+                            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+                                <button className="rt-ghost-btn" onClick={() => { setModal(false); setForm(EMPTY); }}>Cancel</button>
+                                <button className="rt-primary-btn" disabled={!form.documentId || !form.toUserId || create.isPending} onClick={() => create.mutate(form)}>
+                                    {create.isPending ? 'Routing...' : 'Route'}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </Modal>
+                </div>
             )}
 
-            {/* Reject reason modal */}
+            {/* Reject modal */}
             {rejectModal && (
-                <Modal title="Reject Document" onClose={() => setRejectModal(null)} isMobile={isMobile}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                        <Field label="Reason (optional)">
-                            <textarea
-                                style={{ ...s.input, height: 80, resize: "vertical" }}
-                                value={rejectReason}
-                                onChange={(e) => setRejectReason(e.target.value)}
-                                placeholder="Why are you rejecting this document?"
-                            />
-                        </Field>
-                        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 4 }}>
-                            <button style={s.ghostBtn} onClick={() => setRejectModal(null)}>Cancel</button>
-                            <button
-                                style={{ ...s.primaryBtn, background: "linear-gradient(to bottom,#c94040,#8b0000)" }}
-                                disabled={reject.isPending}
-                                onClick={() => reject.mutate({ documentId: selDocId, eventId: rejectModal.id, reason: rejectReason })}
-                            >
-                                {reject.isPending ? "Rejecting..." : "Reject"}
-                            </button>
+                <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setRejectModal(null)}>
+                    <div className="modal-box">
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', borderBottom: '1px solid var(--border)' }}>
+                            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#f87171', fontFamily: "'Inter', sans-serif" }}>Reject Document</h2>
+                            <button className="modal-close-btn" onClick={() => setRejectModal(null)}>✕</button>
+                        </div>
+                        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14, fontFamily: "'Inter', sans-serif" }}>
+                            <Field label="Reason (optional)">
+                                <textarea className="rt-input" style={{ height: 80, resize: 'vertical' }} value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Why are you rejecting this document?" />
+                            </Field>
+                            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+                                <button className="rt-ghost-btn" onClick={() => setRejectModal(null)}>Cancel</button>
+                                <button className="rt-reject-btn" disabled={reject.isPending} onClick={() => reject.mutate({ documentId: selDocId, eventId: rejectModal.id, reason: rejectReason })}>
+                                    {reject.isPending ? 'Rejecting...' : 'Reject'}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </Modal>
+                </div>
             )}
-
         </AppLayout>
     );
 }
 
 function Field({ label, children }) {
-    return <div><label style={s.fieldLabel}>{label}</label><div style={{ marginTop: 4 }}>{children}</div></div>;
-}
-
-function Modal({ title, onClose, children, isMobile }) {
     return (
-        <div style={s.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
-            <div style={{
-                ...s.modal,
-                maxWidth: isMobile ? "100%" : 460,
-                maxHeight: isMobile ? "100vh" : "90vh",
-                borderRadius: isMobile ? 0 : 6,
-                width: "100%",
-            }}>
-                <div style={s.modalHeader}>
-                    <h2 style={s.modalTitle}>{title}</h2>
-                    <button style={s.closeBtn} onClick={onClose}>X</button>
-                </div>
-                <div style={s.modalBody}>{children}</div>
-            </div>
+        <div>
+            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-accent)', letterSpacing: '0.05em', margin: '0 0 4px', display: 'block', fontFamily: "'Inter', sans-serif" }}>{label}</label>
+            <div style={{ marginTop: 4 }}>{children}</div>
         </div>
     );
 }
 
 function Spinner() {
-    return <div style={{ width: 28, height: 28, borderRadius: "50%", border: "3px solid rgba(71,191,255,0.2)", borderTopColor: "#47bfff", animation: "dtSpin 0.8s linear infinite" }} />;
+    return <div style={{ width: 28, height: 28, borderRadius: '50%', border: '3px solid rgba(71,191,255,0.15)', borderTopColor: '#47bfff', animation: 'dtSpin 0.8s linear infinite' }} />;
 }
-
-const s = {
-    page: { padding: "24px 16px", color: "#c6d4df", fontFamily: "'Segoe UI', sans-serif" },
-    pageHeader: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24 },
-    pageTitle: { margin: 0, fontSize: 22, fontWeight: 700, color: "#c6d4df" },
-    pageSub: { margin: "4px 0 0", fontSize: 12, color: "#8f98a0" },
-    sectionLabel: { margin: "0 0 10px", fontSize: 10, fontWeight: 700, color: "#4a7fa5", letterSpacing: "0.08em" },
-    docSelector: { background: "#171a21", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 6, padding: 16, marginBottom: 20 },
-    searchInput: { padding: "8px 12px", background: "#0e1621", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 4, color: "#c6d4df", fontSize: 13, outline: "none" },
-    docList: { display: "flex", flexWrap: "wrap", gap: 8 },
-    docChip: { padding: "6px 12px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 4, fontSize: 12, color: "#8f98a0", cursor: "pointer" },
-    docChipActive: { background: "rgba(79,70,229,0.2)", borderColor: "#4F46E5", color: "#818cf8" },
-    tableWrap: { background: "#171a21", borderRadius: 6, border: "1px solid rgba(255,255,255,0.06)", overflow: "hidden" },
-    tableHeader: { padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" },
-    tableTitle: { fontSize: 14, fontWeight: 600, color: "#c6d4df" },
-    table: { width: "100%", borderCollapse: "collapse" },
-    th: { padding: "12px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#4a7fa5", letterSpacing: "0.06em", borderBottom: "1px solid rgba(255,255,255,0.06)", whiteSpace: "nowrap" },
-    tr: { borderBottom: "1px solid rgba(255,255,255,0.04)", transition: "background 0.15s" },
-    td: { padding: "12px 16px", fontSize: 13, color: "#c6d4df", verticalAlign: "middle" },
-    pill: { padding: "3px 9px", borderRadius: 20, fontSize: 11, fontWeight: 600 },
-    miniAvatar: { width: 24, height: 24, borderRadius: "50%", background: "linear-gradient(135deg,#47bfff,#4F46E5)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 10, fontWeight: 700, flexShrink: 0 },
-    centered: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 48 },
-    approveBtn: { padding: "4px 10px", background: "rgba(74,222,128,0.12)", border: "1px solid rgba(74,222,128,0.25)", borderRadius: 3, color: "#4ade80", fontSize: 12, cursor: "pointer" },
-    rejectBtn: { padding: "4px 10px", background: "rgba(201,64,64,0.12)", border: "1px solid rgba(201,64,64,0.25)", borderRadius: 3, color: "#c94040", fontSize: 12, cursor: "pointer" },
-    primaryBtn: { padding: "9px 18px", background: "linear-gradient(to bottom,#47bfff 5%,#1a44c2 95%)", border: "none", borderRadius: 3, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" },
-    ghostBtn: { padding: "9px 18px", background: "transparent", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 3, color: "#8f98a0", fontSize: 13, cursor: "pointer" },
-    overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 20 },
-    modal: { background: "#1b2838", border: "1px solid rgba(255,255,255,0.08)", display: "flex", flexDirection: "column" },
-    modalHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px", borderBottom: "1px solid rgba(255,255,255,0.07)" },
-    modalTitle: { margin: 0, fontSize: 16, fontWeight: 700, color: "#c6d4df" },
-    closeBtn: { background: "none", border: "none", color: "#8f98a0", fontSize: 16, cursor: "pointer" },
-    modalBody: { padding: 20, overflowY: "auto" },
-    fieldLabel: { fontSize: 11, fontWeight: 700, color: "#4a7fa5", letterSpacing: "0.05em", margin: 0 },
-    input: { width: "100%", padding: "9px 12px", background: "#0e1621", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, color: "#c6d4df", fontSize: 13, outline: "none", boxSizing: "border-box" },
-};

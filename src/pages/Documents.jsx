@@ -5,14 +5,11 @@ import client from "../api/client";
 import useWindowWidth from "../hooks/useWindowWidth";
 import useAuthStore from "../store/authStore";
 
-
 const triggerWorkflow = (id) => client.post("/workflow/trigger/" + id).then((r) => r.data);
 const fetchDocs = () => client.get("/Documents").then((r) => r.data);
 const createDoc = (body) => client.post("/Documents", body).then((r) => r.data);
 const patchStatus = ({ id, status }) =>
-    client.patch("/Documents/" + id + "/status", {
-        status: STATUS_MAP[status] ?? status
-    }).then((r) => r.data);
+    client.patch("/Documents/" + id + "/status", { status: STATUS_MAP[status] ?? status }).then((r) => r.data);
 const deleteDoc = (id) => client.delete("/Documents/" + id).then((r) => r.data);
 const deleteFile = (id) => client.delete("/Documents/" + id + "/file").then((r) => r.data);
 const uploadFile = ({ id, file }) => {
@@ -24,37 +21,20 @@ const uploadFile = ({ id, file }) => {
 };
 
 const STATUS_OPTIONS = ["Draft", "InReview", "Approved", "Rejected", "Archived"];
-
-const STATUS_MAP = {
-    "Draft": 0,
-    "InReview": 1,
-    "Approved": 2,
-    "Rejected": 3,
-    "Archived": 4,
-};
-
+const STATUS_MAP = { Draft: 0, InReview: 1, Approved: 2, Rejected: 3, Archived: 4 };
 const STATUS_COLORS = {
-    Draft: { bg: "rgba(255,255,255,0.06)", color: "#8f98a0" },
+    Draft: { bg: "rgba(143,152,160,0.12)", color: "#8f98a0" },
     InReview: { bg: "rgba(245,158,11,0.15)", color: "#f59e0b" },
     Approved: { bg: "rgba(74,222,128,0.12)", color: "#4ade80" },
-    Rejected: { bg: "rgba(201,64,64,0.12)", color: "#c94040" },
-    Archived: { bg: "rgba(79,70,229,0.15)", color: "#818cf8" },
-    0: { bg: "rgba(255,255,255,0.06)", color: "#8f98a0" },
+    Rejected: { bg: "rgba(248,113,113,0.12)", color: "#f87171" },
+    Archived: { bg: "rgba(129,140,248,0.12)", color: "#818cf8" },
+    0: { bg: "rgba(143,152,160,0.12)", color: "#8f98a0" },
     1: { bg: "rgba(245,158,11,0.15)", color: "#f59e0b" },
     2: { bg: "rgba(74,222,128,0.12)", color: "#4ade80" },
-    3: { bg: "rgba(201,64,64,0.12)", color: "#c94040" },
-    4: { bg: "rgba(79,70,229,0.15)", color: "#818cf8" },
+    3: { bg: "rgba(248,113,113,0.12)", color: "#f87171" },
+    4: { bg: "rgba(129,140,248,0.12)", color: "#818cf8" },
 };
-
-const getStatusLabel = (status) => {
-    const labels = {
-        0: "Draft", 1: "In Review", 2: "Approved", 3: "Rejected", 4: "Archived",
-        Draft: "Draft", InReview: "In Review", Approved: "Approved",
-        Rejected: "Rejected", Archived: "Archived",
-    };
-    return labels[status] || String(status);
-};
-
+const getStatusLabel = (s) => ({ 0: "Draft", 1: "In Review", 2: "Approved", 3: "Rejected", 4: "Archived", Draft: "Draft", InReview: "In Review", Approved: "Approved", Rejected: "Rejected", Archived: "Archived" })[s] || String(s);
 const EMPTY_FORM = { title: "", description: "", type: "", status: "Draft" };
 
 export default function Documents() {
@@ -74,10 +54,8 @@ export default function Documents() {
     const [uploadError, setUploadError] = useState("");
     const PER_PAGE = 10;
 
-    const { data: docs = [], isLoading, error } = useQuery({
-        queryKey: ["documents"],
-        queryFn: fetchDocs,
-    });
+    const { data: docs = [], isLoading, error } = useQuery({ queryKey: ["documents"], queryFn: fetchDocs });
+
     const trigger = useMutation({
         mutationFn: triggerWorkflow,
         onSuccess: () => { qc.invalidateQueries(["documents"]); setModal(null); },
@@ -91,10 +69,7 @@ export default function Documents() {
         mutationFn: patchStatus,
         onSuccess: () => { qc.invalidateQueries(["documents"]); setModal(null); },
     });
-    const remove = useMutation({
-        mutationFn: deleteDoc,
-        onSuccess: () => qc.invalidateQueries(["documents"]),
-    });
+    const remove = useMutation({ mutationFn: deleteDoc, onSuccess: () => qc.invalidateQueries(["documents"]) });
     const removeFile = useMutation({
         mutationFn: deleteFile,
         onSuccess: () => {
@@ -109,7 +84,7 @@ export default function Documents() {
     const openCreate = () => { setForm(EMPTY_FORM); setModal("create"); };
 
     const handleFileUpload = async (e) => {
-        const file = e.target.files && e.target.files[0];
+        const file = e.target.files?.[0];
         if (!file || !selected) return;
         setUploading(true);
         setUploadError("");
@@ -118,14 +93,14 @@ export default function Documents() {
             qc.invalidateQueries(["documents"]);
             setSelected((prev) => prev ? { ...prev, fileUrl: result.fileUrl, fileName: result.fileName } : null);
         } catch (err) {
-            setUploadError(err.response && err.response.data && err.response.data.error ? err.response.data.error : "Upload failed");
+            setUploadError(err.response?.data?.error || "Upload failed");
         } finally {
             setUploading(false);
         }
     };
 
     const filtered = docs.filter((d) => {
-        const matchSearch = (d.title && d.title.toLowerCase().includes(search.toLowerCase())) || (d.type && d.type.toLowerCase().includes(search.toLowerCase()));
+        const matchSearch = (d.title?.toLowerCase().includes(search.toLowerCase())) || (d.type?.toLowerCase().includes(search.toLowerCase()));
         const matchStatus = filterStatus === "All" || d.status === filterStatus;
         return matchSearch && matchStatus;
     });
@@ -135,53 +110,188 @@ export default function Documents() {
 
     return (
         <AppLayout>
-            <div style={s.page}>
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+                @keyframes dtSpin { to { transform: rotate(360deg); } }
+                @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+                .doc-primary-btn {
+                    padding: 9px 18px;
+                    background: linear-gradient(135deg, #47bfff, #4F46E5);
+                    border: none; border-radius: 10px; color: #fff;
+                    font-size: 13px; font-weight: 600; cursor: pointer;
+                    font-family: 'Inter', sans-serif;
+                    transition: opacity 0.2s, transform 0.2s;
+                    box-shadow: 0 4px 12px rgba(79,70,229,0.3);
+                    white-space: nowrap;
+                }
+                .doc-primary-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+                .doc-primary-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+                .doc-ghost-btn {
+                    padding: 9px 18px;
+                    background: transparent;
+                    border: 1px solid var(--border-input);
+                    border-radius: 10px; color: var(--text-muted);
+                    font-size: 13px; cursor: pointer;
+                    font-family: 'Inter', sans-serif;
+                    transition: background 0.2s, color 0.2s;
+                }
+                .doc-ghost-btn:hover { background: var(--bg-hover); color: var(--text-secondary); }
+                .doc-search {
+                    padding: 9px 14px 9px 38px;
+                    background: var(--bg-input);
+                    border: 1px solid var(--border);
+                    border-radius: 10px; color: var(--text-secondary);
+                    font-size: 13px; outline: none;
+                    font-family: 'Inter', sans-serif;
+                    transition: border-color 0.2s, background 0.2s;
+                    box-sizing: border-box;
+                }
+                .doc-search:focus { border-color: rgba(71,191,255,0.4); background: var(--bg-hover); }
+                .doc-search::placeholder { color: var(--text-accent); }
+                .filter-btn {
+                    padding: 6px 12px;
+                    background: transparent;
+                    border: 1px solid var(--border);
+                    border-radius: 8px; color: var(--text-muted);
+                    font-size: 12px; cursor: pointer;
+                    font-family: 'Inter', sans-serif;
+                    transition: all 0.2s; white-space: nowrap;
+                }
+                .filter-btn:hover { background: var(--bg-hover); color: var(--text-secondary); }
+                .filter-btn.active { background: rgba(79,70,229,0.2); border-color: rgba(79,70,229,0.5); color: #818cf8; }
+                .doc-row { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+                .doc-row:hover { background: var(--bg-hover); }
+                .doc-row:last-child { border-bottom: none; }
+                .doc-icon-btn {
+                    background: none; border: none; cursor: pointer;
+                    color: var(--text-muted); font-size: 12px;
+                    padding: 5px 8px; border-radius: 6px;
+                    font-family: 'Inter', sans-serif;
+                    transition: background 0.2s, color 0.2s;
+                }
+                .doc-icon-btn:hover { background: var(--bg-hover); color: var(--text-secondary); }
+                .doc-icon-btn.danger:hover { background: rgba(248,113,113,0.1); color: #f87171; }
+                .page-btn {
+                    padding: 7px 16px;
+                    background: var(--bg-input);
+                    border: 1px solid var(--border);
+                    border-radius: 8px; color: var(--text-muted);
+                    font-size: 12px; cursor: pointer;
+                    font-family: 'Inter', sans-serif;
+                    transition: all 0.2s;
+                }
+                .page-btn:hover:not(:disabled) { background: var(--bg-hover); color: var(--text-secondary); }
+                .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+                .modal-overlay {
+                    position: fixed; inset: 0;
+                    background: rgba(0,0,0,0.7);
+                    backdrop-filter: blur(8px);
+                    -webkit-backdrop-filter: blur(8px);
+                    display: flex; align-items: center; justify-content: center;
+                    z-index: 100; padding: 20px;
+                }
+                .modal-box {
+                    background: var(--modal-bg);
+                    border: 1px solid var(--border);
+                    border-radius: 16px;
+                    width: 100%; max-width: 480px;
+                    max-height: 90vh;
+                    display: flex; flex-direction: column;
+                    box-shadow: 0 24px 48px rgba(0,0,0,0.4);
+                    animation: fadeUp 0.2s ease;
+                }
+                .modal-close-btn {
+                    background: var(--bg-input);
+                    border: none; color: var(--text-muted);
+                    width: 28px; height: 28px;
+                    border-radius: 50%; cursor: pointer;
+                    display: flex; align-items: center; justify-content: center;
+                    font-size: 14px; transition: background 0.2s, color 0.2s;
+                }
+                .modal-close-btn:hover { background: var(--bg-hover); color: var(--text-secondary); }
+                .doc-input {
+                    width: 100%; padding: 9px 12px;
+                    background: var(--bg-input);
+                    border: 1px solid var(--border-input);
+                    border-radius: 8px; color: var(--text-secondary);
+                    font-size: 13px; outline: none;
+                    box-sizing: border-box;
+                    font-family: 'Inter', sans-serif;
+                    transition: border-color 0.2s, background 0.2s;
+                }
+                .doc-input:focus { border-color: rgba(71,191,255,0.4); background: var(--bg-hover); }
+                .upload-zone {
+                    display: inline-flex; align-items: center; gap: 8px;
+                    padding: 8px 14px;
+                    background: var(--bg-input);
+                    border: 1px dashed var(--border-input);
+                    border-radius: 8px; color: var(--text-muted);
+                    font-size: 12px; cursor: pointer;
+                    font-family: 'Inter', sans-serif;
+                    transition: background 0.2s, border-color 0.2s;
+                }
+                .upload-zone:hover { background: var(--bg-hover); border-color: rgba(71,191,255,0.3); color: #47bfff; }
+                .info-card {
+                    padding: 14px;
+                    background: var(--bg-input);
+                    border-radius: 10px;
+                    border: 1px solid var(--border);
+                }
+            `}</style>
 
-                <div style={{ ...s.pageHeader, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 12 : 0 }}>
+            <div style={{ padding: isMobile ? '20px 16px' : '28px 28px', color: 'var(--text-secondary)', fontFamily: "'Inter', sans-serif" }}>
+
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', flexDirection: isMobile ? 'column' : 'row', gap: 12, marginBottom: 24, animation: 'fadeUp 0.3s ease both' }}>
                     <div>
-                        <h1 style={s.pageTitle}>Documents</h1>
-                        <p style={s.pageSub}>{docs.length} total · {filtered.length} shown</p>
+                        <h1 style={{ margin: 0, fontSize: isMobile ? 22 : 26, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Documents</h1>
+                        <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>{docs.length} total · {filtered.length} shown</p>
                     </div>
-                    <button onClick={openCreate} style={s.primaryBtn}>+ New Document</button>
+                    <button className="doc-primary-btn" onClick={openCreate}>+ New Document</button>
                 </div>
 
-                <div style={{ ...s.filterBar, flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-start" : "center" }}>
-                    <input
-                        style={{ ...s.searchInput, width: isMobile ? "100%" : "auto" }}
-                        placeholder="Search by title or type"
-                        value={search}
-                        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                    />
-                    <div style={s.filterGroup}>
+                {/* Filter bar */}
+                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 12, marginBottom: 20, animation: 'fadeUp 0.35s ease both' }}>
+                    <div style={{ position: 'relative', width: isMobile ? '100%' : 260 }}>
+                        <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-accent)', pointerEvents: 'none' }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                        </span>
+                        <input className="doc-search" style={{ width: '100%' }} placeholder="Search by title or type" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         {["All", ...STATUS_OPTIONS].map((st) => (
-                            <button
-                                key={st}
-                                onClick={() => { setFS(st); setPage(1); }}
-                                style={{ ...s.filterBtn, ...(filterStatus === st ? s.filterBtnActive : {}) }}
-                            >
-                                {st}
+                            <button key={st} className={`filter-btn${filterStatus === st ? ' active' : ''}`} onClick={() => { setFS(st); setPage(1); }}>
+                                {st === 'InReview' ? 'In Review' : st}
                             </button>
                         ))}
                     </div>
                 </div>
 
-                <div style={s.tableWrap}>
+                {/* Table */}
+                <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border)', overflow: 'hidden', animation: 'fadeUp 0.4s ease both' }}>
                     {isLoading ? (
-                        <div style={s.centered}><Spinner /></div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48 }}><Spinner /></div>
                     ) : error ? (
-                        <div style={s.centered}><p style={{ color: "#c94040" }}>Failed to load documents</p></div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48 }}>
+                            <p style={{ color: '#f87171', margin: 0 }}>Failed to load documents</p>
+                        </div>
                     ) : paginated.length === 0 ? (
-                        <div style={s.centered}>
-                            <p style={{ color: "#8f98a0" }}>No documents found</p>
-                            <button onClick={openCreate} style={{ ...s.primaryBtn, marginTop: 12 }}>Create one</button>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 48, gap: 12 }}>
+                            <div style={{ fontSize: 32, opacity: 0.3 }}>📄</div>
+                            <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: 13 }}>
+                                {search ? 'No documents match your search.' : 'No documents yet.'}
+                            </p>
+                            {!search && <button className="doc-primary-btn" onClick={openCreate}>Create one</button>}
                         </div>
                     ) : (
-                        <div style={{ overflowX: "auto" }}>
-                            <table style={s.table}>
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
-                                    <tr>
-                                        {["Title", "Type", "Status", "File", "Created", ""].map((h) => (
-                                            <th key={h} style={s.th}>{h}</th>
+                                    <tr style={{ background: 'var(--table-head)' }}>
+                                        {['Title', 'Type', 'Status', 'File', 'Created', ''].map((h) => (
+                                            <th key={h} style={{ padding: '11px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-accent)', letterSpacing: '0.07em', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
+                                                {h}
+                                            </th>
                                         ))}
                                     </tr>
                                 </thead>
@@ -189,39 +299,42 @@ export default function Documents() {
                                     {paginated.map((doc) => {
                                         const sc = STATUS_COLORS[doc.status] ?? STATUS_COLORS[0];
                                         return (
-                                            <tr
-                                                key={doc.id}
-                                                style={s.tr}
-                                                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
-                                                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                                            >
-                                                <td style={s.td}>
-                                                    <span style={s.docTitle} onClick={() => openView(doc)}>{doc.title}</span>
+                                            <tr key={doc.id} className="doc-row">
+                                                <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                                                    <span style={{ display: 'block', fontWeight: 600, cursor: 'pointer', color: '#47bfff', fontSize: 13 }} onClick={() => openView(doc)}>
+                                                        {doc.title}
+                                                    </span>
                                                     {doc.description && (
-                                                        <span style={s.docDesc}>{doc.description.slice(0, 60)}{doc.description.length > 60 ? "..." : ""}</span>
+                                                        <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                                                            {doc.description.slice(0, 60)}{doc.description.length > 60 ? '...' : ''}
+                                                        </span>
                                                     )}
                                                 </td>
-                                                <td style={s.td}><span style={s.typePill}>{doc.type || "n/a"}</span></td>
-                                                <td style={s.td}>
-                                                    <span style={{ ...s.statusPill, background: sc.bg, color: sc.color }}>
+                                                <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                                                    <span style={{ padding: '3px 9px', background: 'var(--bg-input)', borderRadius: 6, fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>
+                                                        {doc.type || 'n/a'}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                                                    <span style={{ background: sc.bg, color: sc.color, padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>
                                                         {getStatusLabel(doc.status)}
                                                     </span>
                                                 </td>
-                                                <td style={s.td}>
+                                                <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
                                                     {doc.fileUrl ? (
-                                                        <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#47bfff", fontSize: 12, textDecoration: "none", whiteSpace: "nowrap" }}>
-                                                            {doc.fileName || "View file"}
+                                                        <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#47bfff', fontSize: 12, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                                                            {doc.fileName || 'View file'}
                                                         </a>
                                                     ) : (
-                                                        <span style={{ color: "#8f98a0", fontSize: 12 }}>No file</span>
+                                                        <span style={{ color: 'var(--text-accent)', fontSize: 12 }}>No file</span>
                                                     )}
                                                 </td>
-                                                <td style={{ ...s.td, color: "#8f98a0", fontSize: 12, whiteSpace: "nowrap" }}>
-                                                    {doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : "n/a"}
+                                                <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: 'var(--text-muted)', fontSize: 12, whiteSpace: 'nowrap' }}>
+                                                    {doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : 'n/a'}
                                                 </td>
-                                                <td style={{ ...s.td, textAlign: "right", whiteSpace: "nowrap" }}>
-                                                    <button style={s.iconBtn} onClick={() => openStatus(doc)}>Status</button>
-                                                    <button style={{ ...s.iconBtn, color: "#c94040" }} onClick={() => { if (window.confirm("Delete " + doc.title + "?")) remove.mutate(doc.id); }}>Delete</button>
+                                                <td style={{ padding: '12px 16px', verticalAlign: 'middle', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                                    <button className="doc-icon-btn" onClick={() => openStatus(doc)}>Status</button>
+                                                    <button className="doc-icon-btn danger" onClick={() => { if (window.confirm('Delete ' + doc.title + '?')) remove.mutate(doc.id); }}>Delete</button>
                                                 </td>
                                             </tr>
                                         );
@@ -232,111 +345,130 @@ export default function Documents() {
                     )}
                 </div>
 
+                {/* Pagination */}
                 {totalPages > 1 && (
-                    <div style={s.pagination}>
-                        <button style={s.pageBtn} disabled={page === 1} onClick={() => setPage((p) => p - 1)}>Prev</button>
-                        <span style={{ color: "#8f98a0", fontSize: 12 }}>Page {page} of {totalPages}</span>
-                        <button style={s.pageBtn} disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>Next</button>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, paddingTop: 18 }}>
+                        <button className="page-btn" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>← Prev</button>
+                        <span style={{ color: 'var(--text-muted)', fontSize: 12, fontWeight: 500 }}>Page {page} of {totalPages}</span>
+                        <button className="page-btn" disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>Next →</button>
                     </div>
                 )}
             </div>
 
-            {modal === "create" && (
-                <Modal title="New Document" onClose={() => setModal(null)} isMobile={isMobile}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                        <Field label="Title">
-                            <input style={s.input} value={form.title} onChange={set("title")} placeholder="Document title" />
-                        </Field>
-                        <Field label="Type">
-                            <input style={s.input} value={form.type} onChange={set("type")} placeholder="e.g. Memo, Request, Report" />
-                        </Field>
-                        <Field label="Description">
-                            <textarea style={{ ...s.input, height: 80, resize: "vertical" }} value={form.description} onChange={set("description")} placeholder="Optional description" />
-                        </Field>
-                        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 4 }}>
-                            <button style={s.ghostBtn} onClick={() => setModal(null)}>Cancel</button>
-                            <button style={s.primaryBtn} onClick={() => { if (form.title.trim()) create.mutate({ ...form, ownerId: user?.id }); }} disabled={create.isPending}>
-                                {create.isPending ? "Creating..." : "Create"}
-                            </button>
+            {/* Create modal */}
+            {modal === 'create' && (
+                <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setModal(null)}>
+                    <div className="modal-box">
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', borderBottom: '1px solid var(--border)' }}>
+                            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', fontFamily: "'Inter', sans-serif" }}>New Document</h2>
+                            <button className="modal-close-btn" onClick={() => setModal(null)}>✕</button>
+                        </div>
+                        <div style={{ padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14, fontFamily: "'Inter', sans-serif" }}>
+                            <Field label="Title"><input className="doc-input" value={form.title} onChange={set('title')} placeholder="Document title" /></Field>
+                            <Field label="Type"><input className="doc-input" value={form.type} onChange={set('type')} placeholder="e.g. Memo, Request, Report" /></Field>
+                            <Field label="Description"><textarea className="doc-input" style={{ height: 80, resize: 'vertical' }} value={form.description} onChange={set('description')} placeholder="Optional description" /></Field>
+                            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+                                <button className="doc-ghost-btn" onClick={() => setModal(null)}>Cancel</button>
+                                <button className="doc-primary-btn" onClick={() => { if (form.title.trim()) create.mutate({ ...form, ownerId: user?.id }); }} disabled={create.isPending}>
+                                    {create.isPending ? 'Creating...' : 'Create'}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </Modal>
+                </div>
             )}
 
-            {modal === "view" && selected && (
-                <Modal title={selected.title} onClose={() => setModal(null)} isMobile={isMobile}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                        <div>
-                            <p style={s.fieldLabel}>Type</p>
-                            <p style={{ margin: 0, fontSize: 14, color: "#c6d4df" }}>{selected.type || "n/a"}</p>
+            {/* View modal */}
+            {modal === 'view' && selected && (
+                <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setModal(null)}>
+                    <div className="modal-box">
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', borderBottom: '1px solid var(--border)' }}>
+                            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', fontFamily: "'Inter', sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 360 }}>{selected.title}</h2>
+                            <button className="modal-close-btn" onClick={() => setModal(null)}>✕</button>
                         </div>
-                        <div>
-                            <p style={s.fieldLabel}>Status</p>
-                            <p style={{ margin: 0, fontSize: 14, color: "#c6d4df" }}>{getStatusLabel(selected.status)}</p>
-                        </div>
-                        <div>
-                            <p style={s.fieldLabel}>Description</p>
-                            <p style={{ margin: 0, fontSize: 14, color: "#c6d4df" }}>{selected.description || "n/a"}</p>
-                        </div>
-                        <div>
-                            <p style={s.fieldLabel}>Created</p>
-                            <p style={{ margin: 0, fontSize: 14, color: "#c6d4df" }}>{selected.createdAt ? new Date(selected.createdAt).toLocaleString() : "n/a"}</p>
-                        </div>
-                        {/* Workflow trigger */}
-                        <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 14, marginTop: 4 }}>
-                            <p style={s.fieldLabel}>WORKFLOW</p>
-                            <p style={{ margin: "4px 0 8px", fontSize: 12, color: "#8f98a0" }}>
-                                Automatically route this document based on workflow rules.
-                            </p>
-                            <button
-                                style={{ ...s.primaryBtn, fontSize: 12, padding: "6px 14px" }}
-                                disabled={trigger.isPending}
-                                onClick={() => trigger.mutate(selected.id)}
-                            >
-                                {trigger.isPending ? "Triggering..." : "Trigger Workflow"}
-                            </button>
-                        </div>
-
-                        
-                        <div style={s.fileSection}>
-                            <p style={s.fieldLabel}>ATTACHED FILE</p>
-                            {selected.fileUrl ? (
-                                <div style={s.fileRow}>
-                                    <span style={{ fontSize: 13, color: "#c6d4df", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 160 }}>{selected.fileName || "File"}</span>
-                                    <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                                        <a href={selected.fileUrl} target="_blank" rel="noopener noreferrer" style={s.downloadBtn}>Download</a>
-                                        <button style={{ ...s.iconBtn, color: "#c94040" }} onClick={() => { if (window.confirm("Remove this file?")) removeFile.mutate(selected.id); }}>Remove</button>
-                                    </div>
+                        <div style={{ padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14, fontFamily: "'Inter', sans-serif" }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                                <div className="info-card">
+                                    <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, color: 'var(--text-accent)', letterSpacing: '0.07em', textTransform: 'uppercase' }}>Type</p>
+                                    <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>{selected.type || 'n/a'}</p>
                                 </div>
-                            ) : (
-                                <p style={{ margin: "4px 0 8px", fontSize: 12, color: "#8f98a0" }}>No file attached</p>
-                            )}
-                            <label style={{ display: "inline-block", cursor: "pointer", marginTop: 8 }}>
-                                <input type="file" accept=".pdf,.doc,.docx" style={{ display: "none" }} onChange={handleFileUpload} disabled={uploading} />
-                                <span style={s.uploadBtn}>{uploading ? "Uploading..." : selected.fileUrl ? "Replace file" : "Upload PDF or DOCX"}</span>
-                            </label>
-                            {uploadError && <p style={{ color: "#c94040", fontSize: 12, margin: "6px 0 0" }}>{uploadError}</p>}
+                                <div className="info-card">
+                                    <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, color: 'var(--text-accent)', letterSpacing: '0.07em', textTransform: 'uppercase' }}>Status</p>
+                                    <span style={{ ...STATUS_COLORS[selected.status], padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>
+                                        {getStatusLabel(selected.status)}
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="info-card">
+                                <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, color: 'var(--text-accent)', letterSpacing: '0.07em', textTransform: 'uppercase' }}>Description</p>
+                                <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{selected.description || 'n/a'}</p>
+                            </div>
+                            <div className="info-card">
+                                <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, color: 'var(--text-accent)', letterSpacing: '0.07em', textTransform: 'uppercase' }}>Created</p>
+                                <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>{selected.createdAt ? new Date(selected.createdAt).toLocaleString() : 'n/a'}</p>
+                            </div>
+                            <div style={{ padding: 14, background: 'rgba(79,70,229,0.06)', borderRadius: 10, border: '1px solid rgba(79,70,229,0.2)' }}>
+                                <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, color: '#818cf8', letterSpacing: '0.07em', textTransform: 'uppercase' }}>Workflow</p>
+                                <p style={{ margin: '4px 0 10px', fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                                    Automatically route this document based on workflow rules.
+                                </p>
+                                <button className="doc-primary-btn" style={{ fontSize: 12, padding: '7px 14px' }} disabled={trigger.isPending} onClick={() => trigger.mutate(selected.id)}>
+                                    {trigger.isPending ? 'Triggering...' : '⚡ Trigger Workflow'}
+                                </button>
+                            </div>
+                            <div className="info-card">
+                                <p style={{ margin: '0 0 10px', fontSize: 10, fontWeight: 700, color: 'var(--text-accent)', letterSpacing: '0.07em', textTransform: 'uppercase' }}>Attached File</p>
+                                {selected.fileUrl ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, padding: '8px 12px', background: 'rgba(71,191,255,0.06)', borderRadius: 8, border: '1px solid rgba(71,191,255,0.15)' }}>
+                                        <span style={{ fontSize: 13, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{selected.fileName || 'File'}</span>
+                                        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                                            <a href={selected.fileUrl} target="_blank" rel="noopener noreferrer" style={{ padding: '4px 10px', background: 'rgba(71,191,255,0.12)', border: '1px solid rgba(71,191,255,0.2)', borderRadius: 6, color: '#47bfff', fontSize: 12, textDecoration: 'none' }}>Download</a>
+                                            <button className="doc-icon-btn danger" onClick={() => { if (window.confirm('Remove this file?')) removeFile.mutate(selected.id); }}>Remove</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--text-muted)' }}>No file attached</p>
+                                )}
+                                <label style={{ cursor: 'pointer' }}>
+                                    <input type="file" accept=".pdf,.doc,.docx" style={{ display: 'none' }} onChange={handleFileUpload} disabled={uploading} />
+                                    <span className="upload-zone">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 16 12 12 8 16" /><line x1="12" y1="12" x2="12" y2="21" /><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" /></svg>
+                                        {uploading ? 'Uploading...' : selected.fileUrl ? 'Replace file' : 'Upload PDF or DOCX'}
+                                    </span>
+                                </label>
+                                {uploadError && <p style={{ color: '#f87171', fontSize: 12, margin: '8px 0 0' }}>{uploadError}</p>}
+                            </div>
                         </div>
                     </div>
-                </Modal>
+                </div>
             )}
 
-            {modal === "status" && selected && (
-                <Modal title={"Update Status — " + selected.title} onClose={() => setModal(null)} isMobile={isMobile}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                        <Field label="New Status">
-                            <select style={s.input} value={newStatus} onChange={(e) => setNewStatus(e.target.value)}>
-                                {STATUS_OPTIONS.map((st) => (<option key={st}>{st}</option>))}
-                            </select>
-                        </Field>
-                        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 4 }}>
-                            <button style={s.ghostBtn} onClick={() => setModal(null)}>Cancel</button>
-                            <button style={s.primaryBtn} disabled={patch.isPending} onClick={() => patch.mutate({ id: selected.id, status: newStatus })}>
-                                {patch.isPending ? "Saving..." : "Update Status"}
-                            </button>
+            {/* Status modal */}
+            {modal === 'status' && selected && (
+                <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setModal(null)}>
+                    <div className="modal-box">
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', borderBottom: '1px solid var(--border)' }}>
+                            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', fontFamily: "'Inter', sans-serif" }}>Update Status</h2>
+                            <button className="modal-close-btn" onClick={() => setModal(null)}>✕</button>
+                        </div>
+                        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14, fontFamily: "'Inter', sans-serif" }}>
+                            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>
+                                Updating status for <strong style={{ color: 'var(--text-secondary)' }}>{selected.title}</strong>
+                            </p>
+                            <Field label="New Status">
+                                <select className="doc-input" value={newStatus} onChange={(e) => setNewStatus(e.target.value)}>
+                                    {STATUS_OPTIONS.map((st) => (<option key={st}>{st}</option>))}
+                                </select>
+                            </Field>
+                            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+                                <button className="doc-ghost-btn" onClick={() => setModal(null)}>Cancel</button>
+                                <button className="doc-primary-btn" disabled={patch.isPending} onClick={() => patch.mutate({ id: selected.id, status: newStatus })}>
+                                    {patch.isPending ? 'Saving...' : 'Update Status'}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </Modal>
+                </div>
             )}
         </AppLayout>
     );
@@ -345,74 +477,12 @@ export default function Documents() {
 function Field({ label, children }) {
     return (
         <div>
-            <label style={s.fieldLabel}>{label}</label>
+            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-accent)', letterSpacing: '0.05em', margin: '0 0 4px', display: 'block', fontFamily: "'Inter', sans-serif" }}>{label}</label>
             <div style={{ marginTop: 4 }}>{children}</div>
         </div>
     );
 }
 
-function Modal({ title, onClose, children, isMobile }) {
-    return (
-        <div style={s.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
-            <div style={{
-                ...s.modal,
-                maxWidth: isMobile ? "100%" : 480,
-                maxHeight: isMobile ? "100vh" : "90vh",
-                borderRadius: isMobile ? 0 : 6,
-                margin: isMobile ? 0 : "auto",
-                width: "100%",
-            }}>
-                <div style={s.modalHeader}>
-                    <h2 style={s.modalTitle}>{title}</h2>
-                    <button style={s.closeBtn} onClick={onClose}>X</button>
-                </div>
-                <div style={s.modalBody}>{children}</div>
-            </div>
-        </div>
-    );
-}
-
 function Spinner() {
-    return (
-        <div style={{ width: 28, height: 28, borderRadius: "50%", border: "3px solid rgba(71,191,255,0.2)", borderTopColor: "#47bfff", animation: "dtSpin 0.8s linear infinite" }} />
-    );
+    return <div style={{ width: 28, height: 28, borderRadius: '50%', border: '3px solid rgba(71,191,255,0.15)', borderTopColor: '#47bfff', animation: 'dtSpin 0.8s linear infinite' }} />;
 }
-
-const s = {
-    page: { padding: "24px 16px", color: "#c6d4df", fontFamily: "'Segoe UI', sans-serif" },
-    pageHeader: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20 },
-    pageTitle: { margin: 0, fontSize: 22, fontWeight: 700, color: "#c6d4df" },
-    pageSub: { margin: "4px 0 0", fontSize: 12, color: "#8f98a0" },
-    filterBar: { display: "flex", gap: 12, marginBottom: 18 },
-    searchInput: { padding: "8px 12px", background: "#171a21", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 4, color: "#c6d4df", fontSize: 13, outline: "none", boxSizing: "border-box" },
-    filterGroup: { display: "flex", gap: 4, flexWrap: "wrap" },
-    filterBtn: { padding: "6px 12px", background: "transparent", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 4, color: "#8f98a0", fontSize: 12, cursor: "pointer" },
-    filterBtnActive: { background: "rgba(79,70,229,0.2)", borderColor: "#4F46E5", color: "#818cf8" },
-    tableWrap: { background: "#171a21", borderRadius: 6, border: "1px solid rgba(255,255,255,0.06)", overflow: "hidden", minHeight: 200 },
-    table: { width: "100%", borderCollapse: "collapse" },
-    th: { padding: "12px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#4a7fa5", letterSpacing: "0.06em", borderBottom: "1px solid rgba(255,255,255,0.06)", whiteSpace: "nowrap" },
-    tr: { borderBottom: "1px solid rgba(255,255,255,0.04)", transition: "background 0.15s" },
-    td: { padding: "12px 16px", fontSize: 13, color: "#c6d4df", verticalAlign: "middle" },
-    docTitle: { display: "block", fontWeight: 600, cursor: "pointer", color: "#47bfff" },
-    docDesc: { display: "block", fontSize: 11, color: "#8f98a0", marginTop: 2 },
-    typePill: { padding: "2px 8px", background: "rgba(255,255,255,0.06)", borderRadius: 3, fontSize: 11, color: "#8f98a0" },
-    statusPill: { padding: "3px 9px", borderRadius: 20, fontSize: 11, fontWeight: 600 },
-    iconBtn: { background: "none", border: "none", cursor: "pointer", color: "#8f98a0", fontSize: 12, padding: "4px 6px", borderRadius: 3 },
-    centered: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 48 },
-    pagination: { display: "flex", alignItems: "center", justifyContent: "center", gap: 16, paddingTop: 16 },
-    pageBtn: { padding: "6px 14px", background: "#171a21", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 4, color: "#8f98a0", fontSize: 12, cursor: "pointer" },
-    primaryBtn: { padding: "9px 18px", background: "linear-gradient(to bottom, #47bfff 5%, #1a44c2 95%)", border: "none", borderRadius: 3, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" },
-    ghostBtn: { padding: "9px 18px", background: "transparent", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 3, color: "#8f98a0", fontSize: 13, cursor: "pointer" },
-    overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: isMobile => isMobile ? "flex-end" : "center", justifyContent: "center", zIndex: 100, padding: 0 },
-    modal: { background: "#1b2838", border: "1px solid rgba(255,255,255,0.08)", display: "flex", flexDirection: "column" },
-    modalHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 20px", borderBottom: "1px solid rgba(255,255,255,0.07)" },
-    modalTitle: { margin: 0, fontSize: 16, fontWeight: 700, color: "#c6d4df" },
-    closeBtn: { background: "none", border: "none", color: "#8f98a0", fontSize: 16, cursor: "pointer" },
-    modalBody: { padding: 20, overflowY: "auto" },
-    fieldLabel: { fontSize: 11, fontWeight: 700, color: "#4a7fa5", letterSpacing: "0.05em", margin: "0 0 4px" },
-    input: { width: "100%", padding: "9px 12px", background: "#171a21", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, color: "#c6d4df", fontSize: 13, outline: "none", boxSizing: "border-box" },
-    fileSection: { borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 14, marginTop: 4 },
-    fileRow: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, padding: "8px 10px", background: "rgba(255,255,255,0.04)", borderRadius: 4 },
-    downloadBtn: { padding: "4px 10px", background: "rgba(71,191,255,0.12)", border: "1px solid rgba(71,191,255,0.2)", borderRadius: 3, color: "#47bfff", fontSize: 12, textDecoration: "none" },
-    uploadBtn: { padding: "6px 14px", background: "rgba(255,255,255,0.06)", border: "1px dashed rgba(255,255,255,0.2)", borderRadius: 4, color: "#8f98a0", fontSize: 12, display: "inline-block" },
-};

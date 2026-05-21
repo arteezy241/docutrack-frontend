@@ -28,78 +28,147 @@ const NAV = [
     },
 ];
 
-// ── extracted outside to avoid "created during render" error ─────────────────
 function SidebarContent({ isMobile, onClose, user, onLogout }) {
-    const initial = (user?.firstName?.[0] || user?.name?.[0] || user?.email?.[0] || "U").toUpperCase();
+    const initial = (user?.firstName?.[0] || user?.fullName?.[0] || user?.name?.[0] || user?.email?.[0] || "U").toUpperCase();
 
     return (
-        <aside style={{ ...s.sidebar, width: isMobile ? "100%" : 220 }}>
-            <div style={s.brand}>
-                <div style={s.brandIcon}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#47bfff" strokeWidth="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                        <polyline points="14 2 14 8 20 8" />
-                        <line x1="16" y1="13" x2="8" y2="13" />
-                        <line x1="16" y1="17" x2="8" y2="17" />
-                        <polyline points="10 9 9 9 8 9" />
-                    </svg>
-                </div>
-                <div style={{ flex: 1 }}>
-                    <div style={s.brandName}>DocuTrack</div>
-                    <div style={s.brandSub}>LPU-Cavite</div>
-                </div>
-                {isMobile && (
-                    <button style={s.closeBtn} onClick={onClose}>X</button>
-                )}
-            </div>
-
-            <div style={s.divider} />
-
-            <nav style={s.nav}>
-                {NAV.map((group) => (
-                    <div key={group.label} style={s.group}>
-                        <p style={s.groupLabel}>{group.label}</p>
-                        {group.items.map(({ to, icon, label }) => (
-                            <NavLink
-                                key={to}
-                                to={to}
-                                end={to === "/"}
-                                onClick={() => isMobile && onClose()}
-                                style={({ isActive }) => ({
-                                    ...s.navItem,
-                                    ...(isActive ? s.navItemActive : {}),
-                                })}
-                            >
-                                <span style={s.navIcon}>{icon}</span>
-                                {label}
-                            </NavLink>
-                        ))}
-                    </div>
-                ))}
-            </nav>
-
-            <div style={s.footer}>
-                <div style={s.divider} />
-                <div style={s.userRow}>
-                    <div style={s.avatar}>{initial}</div>
-                    <div style={s.userInfo}>
-                        <div style={s.userName}>{user?.name || user?.fullName || "User"}</div>
-                        <div style={s.userEmail}>{user?.email || ""}</div>
-                    </div>
-                    <button onClick={onLogout} style={s.logoutBtn} title="Sign out">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                            <polyline points="16 17 21 12 16 7" />
-                            <line x1="21" y1="12" x2="9" y2="12" />
+        <>
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+                
+               .nav-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    padding: 9px 12px;
+                    border-radius: 10px;
+                    color: var(--text-muted);
+                    font-size: 13px;
+                    font-weight: 500;
+                    text-decoration: none;
+                    transition: all 0.2s ease;
+                    margin-bottom: 2px;
+                    position: relative;
+                    font-family: 'Inter', sans-serif;
+                }
+                .nav-item:hover {
+                    background: var(--bg-hover);
+                    color: var(--text-secondary);
+                }
+                .nav-item.active {
+                    background: linear-gradient(135deg, rgba(79,70,229,0.25), rgba(71,191,255,0.12));
+                    color: var(--text-primary);
+                    box-shadow: 0 2px 12px rgba(79,70,229,0.2);
+                }
+                .nav-item.active::before {
+                    content: '';
+                    position: absolute;
+                    left: 0;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    width: 3px;
+                    height: 60%;
+                    background: linear-gradient(to bottom, #47bfff, #4F46E5);
+                    border-radius: 0 3px 3px 0;
+                }
+                .logout-btn {
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    color: var(--text-muted);
+                    padding: 7px;
+                    border-radius: 8px;
+                    display: flex;
+                    align-items: center;
+                    transition: all 0.2s ease;
+                    flex-shrink: 0;
+                }
+                .logout-btn:hover {
+                    background: rgba(201,64,64,0.15);
+                    color: #c94040;
+                }
+                .close-btn {
+                    background: rgba(255,255,255,0.08);
+                    border: none;
+                    color: var(--text-muted);
+                    font-size: 13px;
+                    cursor: pointer;
+                    padding: 6px 10px;
+                    border-radius: 8px;
+                    transition: all 0.2s ease;
+                }
+                .close-btn:hover {
+                    background: rgba(255,255,255,0.12);
+                    color: var(--text-secondary);
+                }
+            `}</style>
+            <aside style={s.sidebar}>
+                {/* Brand */}
+                <div style={s.brand}>
+                    <div style={s.brandIcon}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#47bfff" strokeWidth="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="16" y1="13" x2="8" y2="13" />
+                            <line x1="16" y1="17" x2="8" y2="17" />
+                            <polyline points="10 9 9 9 8 9" />
                         </svg>
-                    </button>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <div style={s.brandName}>DocuTrack</div>
+                        <div style={s.brandSub}>LPU-Cavite</div>
+                    </div>
+                    {isMobile && (
+                        <button className="close-btn" onClick={onClose}>✕</button>
+                    )}
                 </div>
-            </div>
-        </aside>
+
+                <div style={s.divider} />
+
+                {/* Nav */}
+                <nav style={s.nav}>
+                    {NAV.map((group) => (
+                        <div key={group.label} style={s.group}>
+                            <p style={s.groupLabel}>{group.label}</p>
+                            {group.items.map(({ to, icon, label }) => (
+                                <NavLink
+                                    key={to}
+                                    to={to}
+                                    end={to === "/"}
+                                    onClick={() => isMobile && onClose()}
+                                    className={({ isActive }) => `nav-item${isActive ? " active" : ""}`}
+                                >
+                                    <span style={s.navIcon}>{icon}</span>
+                                    {label}
+                                </NavLink>
+                            ))}
+                        </div>
+                    ))}
+                </nav>
+
+                {/* Footer */}
+                <div style={s.footer}>
+                    <div style={s.divider} />
+                    <div style={s.userRow}>
+                        <div style={s.avatar}>{initial}</div>
+                        <div style={s.userInfo}>
+                            <div style={s.userName}>{user?.fullName || user?.name || "User"}</div>
+                            <div style={s.userEmail}>{user?.email || ""}</div>
+                        </div>
+                        <button className="logout-btn" onClick={onLogout} title="Sign out">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                                <polyline points="16 17 21 12 16 7" />
+                                <line x1="21" y1="12" x2="9" y2="12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </aside>
+        </>
     );
 }
 
-// ── main Sidebar component ────────────────────────────────────────────────────
 export default function Sidebar() {
     const navigate = useNavigate();
     const { user, logout } = useAuthStore();
@@ -109,17 +178,31 @@ export default function Sidebar() {
 
     const handleLogout = () => {
         logout();
-        navigate("/login");
+        navigate("/login", { replace: true });
     };
 
-    const initial = (user?.firstName?.[0] || user?.name?.[0] || user?.email?.[0] || "U").toUpperCase();
+    const initial = (user?.firstName?.[0] || user?.fullName?.[0] || user?.name?.[0] || user?.email?.[0] || "U").toUpperCase();
 
     if (isMobile) {
         return (
             <>
+                <style>{`
+                    .hamburger-btn {
+                        background: none;
+                        border: none;
+                        cursor: pointer;
+                        padding: 6px;
+                        display: flex;
+                        align-items: center;
+                        border-radius: 8px;
+                        transition: background 0.2s;
+                    }
+                    .hamburger-btn:hover { background: rgba(255,255,255,0.08); }
+                `}</style>
+
                 {/* Mobile topbar */}
                 <div style={s.mobileTopbar}>
-                    <button style={s.hamburger} onClick={() => setOpen(true)}>
+                    <button className="hamburger-btn" onClick={() => setOpen(true)}>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c6d4df" strokeWidth="2">
                             <line x1="3" y1="6" x2="21" y2="6" />
                             <line x1="3" y1="12" x2="21" y2="12" />
@@ -169,13 +252,12 @@ export default function Sidebar() {
     );
 }
 
-// ── layout wrapper ────────────────────────────────────────────────────────────
 export function AppLayout({ children }) {
     const width = useWindowWidth();
     const isMobile = width < 768;
 
     return (
-        <div style={{ display: "flex", minHeight: "100vh", background: "#1b2838" }}>
+        <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-page)", fontFamily: "'Inter', sans-serif", transition: "background 0.3s ease" }}>
             {!isMobile && <Sidebar />}
             <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "auto", minWidth: 0 }}>
                 {isMobile && <Sidebar />}
@@ -185,37 +267,30 @@ export function AppLayout({ children }) {
     );
 }
 
-// ── styles ────────────────────────────────────────────────────────────────────
 const s = {
-    sidebar: { width: 220, minWidth: 220, background: "#171a21", display: "flex", flexDirection: "column", height: "100vh", position: "sticky", top: 0, borderRight: "1px solid rgba(255,255,255,0.05)" },
-    brand: { display: "flex", alignItems: "center", gap: 10, padding: "20px 16px 16px" },
-    brandIcon: { width: 36, height: 36, borderRadius: 6, background: "rgba(71,191,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
-    brandName: { fontSize: 14, fontWeight: 700, color: "#c6d4df", letterSpacing: "0.01em" },
-    brandSub: { fontSize: 10, color: "#8f98a0", marginTop: 1 },
-    closeBtn: { background: "none", border: "none", color: "#8f98a0", fontSize: 16, cursor: "pointer", padding: 4 },
-    divider: { height: 1, background: "rgba(255,255,255,0.06)", margin: "0 12px" },
+    sidebar: { width: 220, minWidth: 220, background: 'var(--bg-sidebar)', display: "flex", flexDirection: "column", height: "100vh", position: "sticky", top: 0, borderRight: "1px solid var(--border)", fontFamily: "'Inter', sans-serif" },
+    brand: { display: "flex", alignItems: "center", gap: 10, padding: "20px 14px 16px" },
+    brandIcon: { width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, rgba(71,191,255,0.15), rgba(79,70,229,0.15))", border: "1px solid rgba(71,191,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+    brandName: { fontSize: 14, fontWeight: 700, color: "var(--text-secondary)", letterSpacing: "0.01em", fontFamily: "'Inter', sans-serif" },
+    brandSub: { fontSize: 10, color: "var(--text-accent)", marginTop: 1, fontFamily: "'Inter', sans-serif" },
+    divider: { height: 1, background: "var(--divider)", margin: "0 14px" },
     nav: { flex: 1, overflowY: "auto", padding: "12px 8px" },
-    group: { marginBottom: 20 },
-    groupLabel: { fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "#4a7fa5", padding: "0 8px", margin: "0 0 6px" },
-    navItem: { display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 4, color: "#8f98a0", fontSize: 13, fontWeight: 500, textDecoration: "none", transition: "background 0.15s, color 0.15s" },
-    navItemActive: { background: "rgba(79,70,229,0.18)", color: "#c6d4df", borderLeft: "2px solid #4F46E5" },
-    navIcon: { width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+    group: { marginBottom: 22 },
+    groupLabel: { fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "var(--text-accent)", padding: "0 10px", margin: "0 0 6px", fontFamily: "'Inter', sans-serif" },
+    navIcon: { width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, opacity: 0.85 },
     footer: { paddingBottom: 12 },
     userRow: { display: "flex", alignItems: "center", gap: 8, padding: "12px 12px 4px" },
-    avatar: { width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg,#47bfff,#4F46E5)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700, flexShrink: 0 },
+    avatar: { width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(135deg, #47bfff, #4F46E5)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700, flexShrink: 0, boxShadow: "0 2px 8px rgba(79,70,229,0.3)" },
     userInfo: { flex: 1, minWidth: 0 },
-    userName: { fontSize: 12, fontWeight: 600, color: "#c6d4df", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
-    userEmail: { fontSize: 10, color: "#8f98a0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
-    logoutBtn: { background: "none", border: "none", cursor: "pointer", color: "#8f98a0", padding: 4, borderRadius: 4, display: "flex", alignItems: "center", flexShrink: 0 },
-    mobileTopbar: { position: "sticky", top: 0, zIndex: 50, background: "#171a21", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" },
-    hamburger: { background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", alignItems: "center" },
-    overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 99 },
-    drawer: { position: "fixed", top: 0, left: 0, height: "100vh", width: 260, zIndex: 100, transition: "transform 0.3s ease", background: "#171a21" },
+    userName: { fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontFamily: "'Inter', sans-serif" },
+    userEmail: { fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontFamily: "'Inter', sans-serif" },
+    mobileTopbar: { position: "sticky", top: 0, zIndex: 50, background: "var(--topbar-bg)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderBottom: "1px solid var(--border)", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" },
+    overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)", zIndex: 99 },
+    drawer: { position: "fixed", top: 0, left: 0, height: "100vh", width: 260, zIndex: 100, transition: "transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)", background: "var(--bg-sidebar)", boxShadow: "4px 0 24px rgba(0,0,0,0.5)" },
 };
 
-// ── icons ─────────────────────────────────────────────────────────────────────
 function GridIcon() {
-    return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></svg>;
+    return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>;
 }
 function DocIcon() {
     return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>;
