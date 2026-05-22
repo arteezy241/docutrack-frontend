@@ -12,6 +12,7 @@ import Departments from './pages/Departments';
 import Users from './pages/Users';
 import Settings from './pages/Settings';
 import useAuthStore from './store/authStore';
+import AuditLog from './pages/AuditLog';
 
 function ProtectedRoute({ children }) {
     const { token } = useAuthStore();
@@ -37,6 +38,7 @@ function App() {
                 <Route path="/departments" element={<ProtectedRoute><Departments /></ProtectedRoute>} />
                 <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                <Route path="/audit" element={<ProtectedRoute><AuditLog /></ProtectedRoute>} />
 
                 {/* Fallback */}
                 <Route path="*" element={<Navigate to="/login" />} />

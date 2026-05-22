@@ -28,15 +28,39 @@ export default function Dashboard() {
     const isTablet = width < 1024;
 
     const [docs, setDocs] = useState([]);
+    const [routingEvents, setRoutingEvents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
 
     useEffect(() => {
-        client.get('/documents').then(res => {
-            setDocs(res.data);
-            setLoading(false);
-        }).catch(() => setLoading(false));
+        const loadData = async () => {
+            try {
+                const [docsRes] = await Promise.all([
+                    client.get('/documents'),
+                ]);
+                setDocs(docsRes.data);
+
+                // Fetch routing events for each document to find pending approvals
+                const pendingRes = await client.get('/routing/pending');
+                setRoutingEvents(pendingRes.data);
+
+                
+            } catch (error) { console.error(error); }
+            finally { setLoading(false); }
+        };
+        loadData();
     }, []);
+
+    const pendingApprovals = routingEvents;
+
+    const now = new Date();
+    const overdueDocs = docs.filter(d => {
+        if (!d.dueDate) return false;
+        const due = new Date(d.dueDate);
+        const isOverdue = due < now;
+        const notDone = d.status !== 2 && d.status !== 4;
+        return isOverdue && notDone;
+    });
 
     const statValues = {
         total: docs.length,
@@ -68,65 +92,42 @@ export default function Dashboard() {
                     to { opacity: 1; transform: translateY(0); }
                 }
                 .stat-card {
-                    background: var(--bg-card);
-                    border: 1px solid var(--border);
-                    border-radius: 16px;
-                    padding: 20px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
+                    background: var(--bg-card); border: 1px solid var(--border);
+                    border-radius: 16px; padding: 20px;
+                    display: flex; align-items: center; justify-content: space-between;
                     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-                    animation: fadeUp 0.4s ease both;
-                    cursor: default;
+                    animation: fadeUp 0.4s ease both; cursor: pointer;
                 }
-                .stat-card:hover {
-                    transform: translateY(-2px);
-                    border-color: var(--border-input);
-                }
+                .stat-card:hover { transform: translateY(-2px); border-color: var(--border-input); }
                 .db-search {
-                    padding: 9px 14px 9px 36px;
-                    background: var(--bg-input);
-                    border: 1px solid var(--border);
-                    border-radius: 10px;
-                    color: var(--text-secondary);
-                    font-size: 13px;
-                    outline: none;
-                    font-family: 'Inter', sans-serif;
-                    transition: border-color 0.2s, background 0.2s;
+                    padding: 9px 14px 9px 36px; background: var(--bg-input);
+                    border: 1px solid var(--border); border-radius: 10px;
+                    color: var(--text-secondary); font-size: 13px; outline: none;
+                    font-family: 'Inter', sans-serif; transition: border-color 0.2s, background 0.2s;
                     width: 100%;
                 }
-                .db-search:focus {
-                    border-color: rgba(71,191,255,0.4);
-                    background: var(--bg-hover);
-                }
+                .db-search:focus { border-color: rgba(71,191,255,0.4); background: var(--bg-hover); }
                 .db-search::placeholder { color: var(--text-accent); }
                 .db-primary-btn {
-                    padding: 9px 18px;
-                    background: linear-gradient(135deg, #47bfff, #4F46E5);
+                    padding: 9px 18px; background: linear-gradient(135deg, #47bfff, #4F46E5);
                     border: none; border-radius: 10px; color: #fff;
                     font-size: 13px; font-weight: 600; cursor: pointer;
-                    font-family: 'Inter', sans-serif;
-                    transition: opacity 0.2s, transform 0.2s;
-                    white-space: nowrap;
-                    box-shadow: 0 4px 12px rgba(79,70,229,0.3);
+                    font-family: 'Inter', sans-serif; transition: opacity 0.2s, transform 0.2s;
+                    white-space: nowrap; box-shadow: 0 4px 12px rgba(79,70,229,0.3);
                 }
                 .db-primary-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-                .db-primary-btn:active { transform: translateY(0); }
                 .view-all-btn {
-                    background: none; border: none;
-                    color: #47bfff; font-size: 12px; cursor: pointer;
-                    font-family: 'Inter', sans-serif; font-weight: 500;
-                    padding: 4px 8px; border-radius: 6px;
-                    transition: background 0.2s;
+                    background: none; border: none; color: #47bfff; font-size: 12px;
+                    cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 500;
+                    padding: 4px 8px; border-radius: 6px; transition: background 0.2s;
                 }
                 .view-all-btn:hover { background: rgba(71,191,255,0.1); }
-                .doc-row {
-                    border-bottom: 1px solid var(--border);
-                    transition: background 0.15s;
-                    cursor: pointer;
-                }
+                .doc-row { border-bottom: 1px solid var(--border); transition: background 0.15s; cursor: pointer; }
                 .doc-row:hover { background: var(--bg-hover); }
                 .doc-row:last-child { border-bottom: none; }
+                .alert-row { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+                .alert-row:hover { background: var(--bg-hover); }
+                .alert-row:last-child { border-bottom: none; }
             `}</style>
 
             <div style={{ padding: isMobile ? '20px 16px' : '28px 28px', color: 'var(--text-secondary)', fontFamily: "'Inter', sans-serif", maxWidth: 1200 }}>
@@ -150,39 +151,18 @@ export default function Dashboard() {
                         <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-accent)' }}>
                             <SearchIcon />
                         </span>
-                        <input
-                            className="db-search"
-                            placeholder="Search documents..."
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
-                        />
+                        <input className="db-search" placeholder="Search documents..." value={search} onChange={e => setSearch(e.target.value)} />
                     </div>
-                    <button className="db-primary-btn" onClick={() => navigate('/documents')}>
-                        + New Document
-                    </button>
+                    <button className="db-primary-btn" onClick={() => navigate('/documents')}>+ New Document</button>
                 </div>
 
                 {/* Stats grid */}
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr 1fr' : isTablet ? 'repeat(2,1fr)' : 'repeat(4,1fr)',
-                    gap: 14,
-                    marginBottom: 28,
-                }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : isTablet ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
                     {statConfig.map(({ label, key, color, glow, icon, filter }, i) => (
-                        <div
-                            key={key}
-                            className="stat-card"
-                            style={{ animationDelay: `${i * 0.07}s`, boxShadow: `0 4px 20px ${glow}`, cursor: 'pointer' }}
-                            onClick={() => navigate('/documents', { state: { filter } })}
-                        >
+                        <div key={key} className="stat-card" style={{ animationDelay: `${i * 0.07}s`, boxShadow: `0 4px 20px ${glow}` }} onClick={() => navigate('/documents', { state: { filter } })}>
                             <div>
-                                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.05em', marginBottom: 8, textTransform: 'uppercase' }}>
-                                    {label}
-                                </div>
-                                <div style={{ fontSize: 32, fontWeight: 800, color, letterSpacing: '-0.02em', lineHeight: 1 }}>
-                                    {loading ? '—' : statValues[key]}
-                                </div>
+                                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.05em', marginBottom: 8, textTransform: 'uppercase' }}>{label}</div>
+                                <div style={{ fontSize: 32, fontWeight: 800, color, letterSpacing: '-0.02em', lineHeight: 1 }}>{loading ? '—' : statValues[key]}</div>
                             </div>
                             <div style={{ width: 44, height: 44, borderRadius: 12, background: glow, border: `1px solid ${color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', color, flexShrink: 0 }}>
                                 {icon}
@@ -191,7 +171,98 @@ export default function Dashboard() {
                     ))}
                 </div>
 
-                {/* Table card */}
+                {/* Pending Approvals + Overdue — side by side on desktop */}
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16, marginBottom: 24, animation: 'fadeUp 0.45s ease both' }}>
+
+                    {/* Pending Approvals */}
+                    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+                        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Pending Approvals</span>
+                                {!loading && pendingApprovals.length > 0 && (
+                                    <span style={{ fontSize: 11, fontWeight: 700, background: 'rgba(245,158,11,0.15)', color: '#f59e0b', padding: '2px 8px', borderRadius: 20 }}>
+                                        {pendingApprovals.length}
+                                    </span>
+                                )}
+                            </div>
+                            <button className="view-all-btn" onClick={() => navigate('/routing')}>View all →</button>
+                        </div>
+                        {loading ? (
+                            <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><Spinner /></div>
+                        ) : pendingApprovals.length === 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 32, gap: 8 }}>
+                                <div style={{ fontSize: 24, opacity: 0.3 }}>✅</div>
+                                <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: 13 }}>No pending approvals</p>
+                            </div>
+                        ) : (
+                            <div>
+                                {pendingApprovals.slice(0, 5).map((ev) => (
+                                    <div key={ev.id} className="alert-row" style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}
+                                        onClick={() => navigate('/routing')}>
+                                        <div style={{ minWidth: 0 }}>
+                                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {ev.docTitle || 'Untitled'}
+                                            </div>
+                                            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                                                Awaiting your approval
+                                            </div>
+                                        </div>
+                                        <span style={{ fontSize: 11, fontWeight: 600, background: 'rgba(245,158,11,0.12)', color: '#f59e0b', padding: '3px 9px', borderRadius: 20, flexShrink: 0 }}>
+                                            Pending
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Overdue Documents */}
+                    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+                        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Overdue Documents</span>
+                                {!loading && overdueDocs.length > 0 && (
+                                    <span style={{ fontSize: 11, fontWeight: 700, background: 'rgba(248,113,113,0.15)', color: '#f87171', padding: '2px 8px', borderRadius: 20 }}>
+                                        {overdueDocs.length}
+                                    </span>
+                                )}
+                            </div>
+                            <button className="view-all-btn" onClick={() => navigate('/documents')}>View all →</button>
+                        </div>
+                        {loading ? (
+                            <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><Spinner /></div>
+                        ) : overdueDocs.length === 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 32, gap: 8 }}>
+                                <div style={{ fontSize: 24, opacity: 0.3 }}>🎉</div>
+                                <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: 13 }}>No overdue documents</p>
+                            </div>
+                        ) : (
+                            <div>
+                                {overdueDocs.slice(0, 5).map((doc) => {
+                                    const daysOverdue = Math.abs(Math.ceil((new Date(doc.dueDate) - now) / (1000 * 60 * 60 * 24)));
+                                    return (
+                                        <div key={doc.id} className="alert-row" style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}
+                                            onClick={() => navigate('/documents')}>
+                                            <div style={{ minWidth: 0 }}>
+                                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    {doc.title || 'Untitled'}
+                                                </div>
+                                                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                                                    Due {new Date(doc.dueDate).toLocaleDateString()}
+                                                </div>
+                                            </div>
+                                            <span style={{ fontSize: 11, fontWeight: 600, background: 'rgba(248,113,113,0.12)', color: '#f87171', padding: '3px 9px', borderRadius: 20, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                                                {daysOverdue}d overdue
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Recent Documents table */}
                 <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', animation: 'fadeUp 0.5s ease both', animationDelay: '0.2s' }}>
                     <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div>
@@ -202,27 +273,21 @@ export default function Dashboard() {
                     </div>
 
                     {loading ? (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48 }}>
-                            <Spinner />
-                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48 }}><Spinner /></div>
                     ) : filtered.length === 0 ? (
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 48, gap: 12 }}>
                             <div style={{ fontSize: 32, opacity: 0.3 }}>📄</div>
                             <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: 13 }}>
                                 {search ? 'No documents match your search.' : 'No documents yet.'}
                             </p>
-                            {!search && (
-                                <button className="db-primary-btn" onClick={() => navigate('/documents')}>
-                                    Create your first document
-                                </button>
-                            )}
+                            {!search && <button className="db-primary-btn" onClick={() => navigate('/documents')}>Create your first document</button>}
                         </div>
                     ) : (
                         <div style={{ overflowX: 'auto' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
                                     <tr style={{ background: 'var(--table-head)' }}>
-                                        {['ID', 'Title', 'Status', 'Owner', 'Created'].map(h => (
+                                        {['ID', 'Title', 'Status', 'Owner', 'Due Date', 'Created'].map(h => (
                                             <th key={h} style={{ padding: '11px 20px', textAlign: 'left', color: 'var(--text-accent)', fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
                                                 {h}
                                             </th>
@@ -232,6 +297,7 @@ export default function Dashboard() {
                                 <tbody>
                                     {filtered.slice(0, 10).map((doc, i) => {
                                         const status = statusMap[doc.status] || statusMap[0];
+                                        const isDue = doc.dueDate && new Date(doc.dueDate) < now && doc.status !== 2 && doc.status !== 4;
                                         return (
                                             <tr key={doc.id} className="doc-row" onClick={() => navigate('/documents')}>
                                                 <td style={{ padding: '13px 20px', color: 'var(--text-accent)', fontSize: 11, fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
@@ -247,6 +313,13 @@ export default function Dashboard() {
                                                 </td>
                                                 <td style={{ padding: '13px 20px', fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                                                     {doc.owner?.fullName || '—'}
+                                                </td>
+                                                <td style={{ padding: '13px 20px', whiteSpace: 'nowrap' }}>
+                                                    {doc.dueDate ? (
+                                                        <span style={{ fontSize: 11, fontWeight: 600, background: isDue ? 'rgba(248,113,113,0.12)' : 'rgba(74,222,128,0.12)', color: isDue ? '#f87171' : '#4ade80', padding: '3px 9px', borderRadius: 20 }}>
+                                                            {isDue ? '⚠ ' : ''}{new Date(doc.dueDate).toLocaleDateString()}
+                                                        </span>
+                                                    ) : <span style={{ color: 'var(--text-accent)', fontSize: 12 }}>—</span>}
                                                 </td>
                                                 <td style={{ padding: '13px 20px', fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                                                     {doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : '—'}
@@ -264,10 +337,7 @@ export default function Dashboard() {
     );
 }
 
-function Spinner() {
-    return <div style={{ width: 28, height: 28, borderRadius: '50%', border: '3px solid rgba(71,191,255,0.15)', borderTopColor: '#47bfff', animation: 'dtSpin 0.8s linear infinite' }} />;
-}
-
+function Spinner() { return <div style={{ width: 28, height: 28, borderRadius: '50%', border: '3px solid rgba(71,191,255,0.15)', borderTopColor: '#47bfff', animation: 'dtSpin 0.8s linear infinite' }} />; }
 function DocIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>; }
 function ClockIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>; }
 function CheckIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>; }

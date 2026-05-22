@@ -5,7 +5,7 @@ import client from "../api/client";
 import useWindowWidth from "../hooks/useWindowWidth";
 import useAuthStore from "../store/authStore";
 
-import { useNavigate, useLocation } from 'react-router-dom';
+
 
 const triggerWorkflow = (id) => client.post("/workflow/trigger/" + id).then((r) => r.data);
 const fetchDocs = () => client.get("/Documents").then((r) => r.data);
@@ -14,6 +14,7 @@ const patchStatus = ({ id, status }) =>
     client.patch("/Documents/" + id + "/status", { status: STATUS_MAP[status] ?? status }).then((r) => r.data);
 const deleteDoc = (id) => client.delete("/Documents/" + id).then((r) => r.data);
 const deleteFile = (id) => client.delete("/Documents/" + id + "/file").then((r) => r.data);
+const updateDueDate = ({ id, dueDate }) => client.patch("/Documents/" + id + "/due-date", { dueDate }).then((r) => r.data);
 const uploadFile = ({ id, file }) => {
     const form = new FormData();
     form.append("file", file);
@@ -37,7 +38,17 @@ const STATUS_COLORS = {
     4: { bg: "rgba(129,140,248,0.12)", color: "#818cf8" },
 };
 const getStatusLabel = (s) => ({ 0: "Draft", 1: "In Review", 2: "Approved", 3: "Rejected", 4: "Archived", Draft: "Draft", InReview: "In Review", Approved: "Approved", Rejected: "Rejected", Archived: "Archived" })[s] || String(s);
-const EMPTY_FORM = { title: "", description: "", type: "", status: "Draft" };
+const getDueDateStatus = (dueDate) => {
+    if (!dueDate) return null;
+    const now = new Date();
+    const due = new Date(dueDate);
+    const diffDays = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) return { label: 'Overdue', color: '#f87171', bg: 'rgba(248,113,113,0.12)' };
+    if (diffDays === 0) return { label: 'Due today', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' };
+    if (diffDays <= 3) return { label: `Due in ${diffDays}d`, color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' };
+    return { label: `Due ${due.toLocaleDateString()}`, color: '#4ade80', bg: 'rgba(74,222,128,0.12)' };
+};
+const EMPTY_FORM = { title: "", description: "", type: "", status: "Draft", dueDate: "" };
 
 export default function Documents() {
     const qc = useQueryClient();
@@ -78,6 +89,10 @@ export default function Documents() {
             qc.invalidateQueries(["documents"]);
             setSelected((prev) => prev ? { ...prev, fileUrl: null, fileName: null } : null);
         },
+    });
+    const dueDateMut = useMutation({
+        mutationFn: updateDueDate,
+        onSuccess: () => qc.invalidateQueries(["documents"]),
     });
 
     const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -292,7 +307,7 @@ export default function Documents() {
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
                                     <tr style={{ background: 'var(--table-head)' }}>
-                                        {['Title', 'Type', 'Status', 'File', 'Created', ''].map((h) => (
+                                                    {['Title', 'Type', 'Status', 'Due Date', 'File', 'Created', ''].map((h) => (
                                             <th key={h} style={{ padding: '11px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-accent)', letterSpacing: '0.07em', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
                                                 {h}
                                             </th>
@@ -333,6 +348,13 @@ export default function Documents() {
                                                         <span style={{ color: 'var(--text-accent)', fontSize: 12 }}>No file</span>
                                                     )}
                                                 </td>
+                                                <td style={{ padding: '12px 16px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                                    {(() => {
+                                                        const ds = getDueDateStatus(doc.dueDate);
+                                                        if (!ds) return <span style={{ color: 'var(--text-accent)', fontSize: 12 }}>—</span>;
+                                                        return <span style={{ background: ds.bg, color: ds.color, padding: '3px 9px', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{ds.label}</span>;
+                                                    })()}
+                                                </td>
                                                 <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: 'var(--text-muted)', fontSize: 12, whiteSpace: 'nowrap' }}>
                                                     {doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : 'n/a'}
                                                 </td>
@@ -371,9 +393,24 @@ export default function Documents() {
                             <Field label="Title"><input className="doc-input" value={form.title} onChange={set('title')} placeholder="Document title" /></Field>
                             <Field label="Type"><input className="doc-input" value={form.type} onChange={set('type')} placeholder="e.g. Memo, Request, Report" /></Field>
                             <Field label="Description"><textarea className="doc-input" style={{ height: 80, resize: 'vertical' }} value={form.description} onChange={set('description')} placeholder="Optional description" /></Field>
+                            <Field label="Due Date (optional)">
+                                <input className="doc-input" type="date" value={form.dueDate} onChange={set('dueDate')} />
+                            </Field>
                             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
                                 <button className="doc-ghost-btn" onClick={() => setModal(null)}>Cancel</button>
-                                <button className="doc-primary-btn" onClick={() => { if (form.title.trim()) create.mutate({ ...form, ownerId: user?.id }); }} disabled={create.isPending}>
+                                <button className="doc-primary-btn" onClick={() => {
+                                    if (!form.title.trim()) return;
+                                    const payload = {
+                                        title: form.title,
+                                        description: form.description || null,
+                                        type: form.type || null,
+                                        ownerId: user?.id,
+                                        dueDate: form.dueDate ? new Date(form.dueDate).toISOString() : null,
+                                        status: 0
+                                    };
+                                    console.log('payload:', payload);
+                                    create.mutate(payload);
+                                }} disabled={create.isPending}>
                                     {create.isPending ? 'Creating...' : 'Create'}
                                 </button>
                             </div>
@@ -410,6 +447,27 @@ export default function Documents() {
                             <div className="info-card">
                                 <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, color: 'var(--text-accent)', letterSpacing: '0.07em', textTransform: 'uppercase' }}>Created</p>
                                 <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>{selected.createdAt ? new Date(selected.createdAt).toLocaleString() : 'n/a'}</p>
+                            </div>
+                            <div className="info-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                                <div>
+                                    <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, color: 'var(--text-accent)', letterSpacing: '0.07em', textTransform: 'uppercase' }}>Due Date</p>
+                                    {(() => {
+                                        const ds = getDueDateStatus(selected.dueDate);
+                                        if (!ds) return <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>No due date set</p>;
+                                        return <span style={{ background: ds.bg, color: ds.color, padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{ds.label}</span>;
+                                    })()}
+                                </div>
+                                <input
+                                    type="date"
+                                    className="doc-input"
+                                    style={{ width: 'auto', fontSize: 12 }}
+                                    value={selected.dueDate ? new Date(selected.dueDate).toISOString().split('T')[0] : ''}
+                                    onChange={(e) => {
+                                        const val = e.target.value || null;
+                                        dueDateMut.mutate({ id: selected.id, dueDate: val });
+                                        setSelected(prev => prev ? { ...prev, dueDate: val } : null);
+                                    }}
+                                />
                             </div>
                             <div style={{ padding: 14, background: 'rgba(79,70,229,0.06)', borderRadius: 10, border: '1px solid rgba(79,70,229,0.2)' }}>
                                 <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 700, color: '#818cf8', letterSpacing: '0.07em', textTransform: 'uppercase' }}>Workflow</p>
