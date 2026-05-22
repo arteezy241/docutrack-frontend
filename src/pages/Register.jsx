@@ -60,14 +60,18 @@ export default function Register() {
         window.addEventListener('resize', resize);
 
         const colors = ['#4F46E5', '#47bfff', '#7c3aed', '#06b6d4', '#0ea5e9'];
-        const particles = Array.from({ length: 60 }, () => ({
-            x: Math.random() * w, y: Math.random() * h,
-            r: Math.random() * 3 + 1,
-            color: colors[Math.floor(Math.random() * colors.length)],
-            vx: (Math.random() - 0.5) * 0.6,
-            vy: (Math.random() - 0.5) * 0.6,
-            opacity: Math.random() * 0.4 + 0.1,
-        }));
+        const particles = Array.from({ length: 60 }, () => {
+            const vx = (Math.random() - 0.5) * 0.6;
+            const vy = (Math.random() - 0.5) * 0.6;
+            return {
+                x: Math.random() * w, y: Math.random() * h,
+                r: Math.random() * 3 + 1,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                vx, vy,
+                baseVx: vx, baseVy: vy,
+                opacity: Math.random() * 0.4 + 0.1,
+            };
+        });
 
         const repulse = (cx, cy) => {
             particles.forEach(p => {
@@ -120,10 +124,11 @@ export default function Register() {
                 ctx.fill();
                 p.x += p.vx;
                 p.y += p.vy;
-                p.vx *= 0.98;
-                p.vy *= 0.98;
-                if (p.x < 0 || p.x > w) p.vx *= -1;
-                if (p.y < 0 || p.y > h) p.vy *= -1;
+                // Gradually return to base speed after repulsion
+                p.vx += (p.baseVx - p.vx) * 0.02;
+                p.vy += (p.baseVy - p.vy) * 0.02;
+                if (p.x < 0 || p.x > w) { p.vx *= -1; p.baseVx *= -1; }
+                if (p.y < 0 || p.y > h) { p.vy *= -1; p.baseVy *= -1; }
             });
             animId = requestAnimationFrame(draw);
         };
