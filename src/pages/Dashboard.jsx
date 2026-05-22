@@ -4,7 +4,7 @@ import client from '../api/client';
 import { AppLayout } from '../components/Sidebar';
 import useAuthStore from '../store/authStore';
 import useWindowWidth from '../hooks/useWindowWidth';
-
+// burat?
 const statusMap = {
     0: { label: 'Draft', color: '#8f98a0', bg: 'rgba(143,152,160,0.12)' },
     1: { label: 'In Review', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
