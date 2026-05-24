@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import client from '../api/client';
+import client, { setCookie, getDeviceName } from '../api/client';
 import useAuthStore from '../store/authStore';
 import { GoogleLogin } from "@react-oauth/google";
 import useWindowWidth from '../hooks/useWindowWidth';
@@ -157,9 +157,10 @@ export default function Login() {
             const res = await client.post('/auth/verify-device', {
                 email: pendingEmail,
                 otp: deviceOtp,
-                deviceName: navigator.userAgent.slice(0, 100),
+                deviceName: getDeviceName()
             });
             localStorage.setItem('deviceToken', res.data.deviceToken);
+            setCookie('deviceToken', res.data.deviceToken, 30);
             login(res.data.token, res.data.user);
             registerPush();
             navigate('/', { replace: true });

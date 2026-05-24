@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "../components/Sidebar";
 import useAuthStore from "../store/authStore";
 import useThemeStore from "../store/themeStore";
-import client from "../api/client";
+import client, { setCookie, removeCookie, getDeviceName } from '../api/client';
 import useWindowWidth from "../hooks/useWindowWidth";
 
 const fetchApiKeys = () => client.get("/apikeys").then((r) => r.data);
@@ -52,6 +52,7 @@ function TwoFactorSection() {
             const removed = devices.find(d => d.id === id);
             if (removed?.deviceToken === localStorage.getItem('deviceToken')) {
                 localStorage.removeItem('deviceToken');
+                removeCookie('deviceToken');
             }
             setDevices(d => d.filter(dev => dev.id !== id));
         } catch {
@@ -64,8 +65,9 @@ function TwoFactorSection() {
 
     const trustCurrentDevice = async () => {
         try {
-            const res = await client.post('/auth/trust-device');
+            const res = await client.post('/auth/trust-device', { deviceName: getDeviceName() });
             localStorage.setItem('deviceToken', res.data.deviceToken);
+            setCookie('deviceToken', res.data.deviceToken, 90);
             const devicesRes = await client.get('/auth/trusted-devices');
             setDevices(devicesRes.data);
         } catch {
@@ -125,7 +127,8 @@ function TwoFactorSection() {
                                             )}
                                         </p>
                                         <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--text-muted)", fontFamily: "'Inter', sans-serif" }}>
-                                            Last used: {new Date(dev.lastUsedAt).toLocaleDateString()}
+                                            Trusted {new Date(dev.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                            {' · '}Last used {new Date(dev.lastUsedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                         </p>
                                     </div>
                                 </div>
