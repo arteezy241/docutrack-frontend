@@ -159,7 +159,7 @@ export default function Login() {
             const res = await client.post('/auth/verify-device', {
                 email: pendingEmail,
                 otp: deviceOtp,
-                deviceName: navigator.userAgent.slice(0, 100),
+                deviceName: getDeviceName(),
             });
             
             login(res.data.token, res.data.user);
