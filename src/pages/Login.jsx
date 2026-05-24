@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import client from '../api/client';
+import client, { getDeviceName } from '../api/client';
 import useAuthStore from '../store/authStore';
 import { GoogleLogin } from "@react-oauth/google";
 import useWindowWidth from '../hooks/useWindowWidth';
 import { registerPush } from '../api/push';
 import { useEffect, useRef } from "react";
-import client, { getDeviceName } from '../api/client';
+
 
 export default function Login() {
     const [email, setEmail] = useState('');
