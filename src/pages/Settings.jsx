@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "../components/Sidebar";
 import useAuthStore from "../store/authStore";
 import useThemeStore from "../store/themeStore";
-import client, { setCookie, removeCookie, getDeviceName } from '../api/client';
+import client, { getDeviceName } from "../api/client";
 import useWindowWidth from "../hooks/useWindowWidth";
 
 const fetchApiKeys = () => client.get("/apikeys").then((r) => r.data);
@@ -49,26 +49,20 @@ function TwoFactorSection() {
         if (!window.confirm("Remove this trusted device?")) return;
         try {
             await client.delete("/auth/trusted-devices/" + id);
-            const removed = devices.find(d => d.id === id);
-            if (removed?.deviceToken === localStorage.getItem('deviceToken')) {
-                localStorage.removeItem(`deviceToken_${user?.id}`);
-                removeCookie(`deviceToken_${user?.id}`);
-            }
+            
             setDevices(d => d.filter(dev => dev.id !== id));
         } catch {
             alert("Failed to remove device");
         }
     };
 
-    const currentDeviceToken = localStorage.getItem(`deviceToken_${user?.id}`);
-    const isCurrentDeviceTrusted = devices.some(d => d.deviceToken === currentDeviceToken);
+    
+    const isCurrentDeviceTrusted = devices.some(d => d.isCurrent);
 
     const trustCurrentDevice = async () => {
         try {
-            const res = await client.post('/auth/trust-device', { deviceName: getDeviceName() });
-            const userId = user?.id; // from useAuthStore
-            localStorage.setItem(`deviceToken_${userId}`, res.data.deviceToken);
-            setCookie(`deviceToken_${userId}`, res.data.deviceToken, 90);
+            await client.post('/auth/trust-device', { deviceName: getDeviceName() });
+            // cookie set automatically by backend
             const devicesRes = await client.get('/auth/trusted-devices');
             setDevices(devicesRes.data);
         } catch {
@@ -115,21 +109,20 @@ function TwoFactorSection() {
                     <p style={{ margin: "0 0 10px", fontSize: 10, fontWeight: 700, color: "var(--text-accent)", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Inter', sans-serif" }}>Trusted Devices</p>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                         {devices.map((dev) => (
-                            <div key={dev.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "var(--bg-input)", borderRadius: 10, border: dev.deviceToken === currentDeviceToken ? "1px solid rgba(71,191,255,0.3)" : "1px solid var(--border)" }}>
+                            <div key={dev.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "var(--bg-input)", borderRadius: 10, border: dev.isCurrent ? "1px solid rgba(71,191,255,0.3)" : "1px solid var(--border)" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                    <div style={{ width: 32, height: 32, borderRadius: 8, background: dev.deviceToken === currentDeviceToken ? "rgba(71,191,255,0.1)" : "rgba(255,255,255,0.05)", border: dev.deviceToken === currentDeviceToken ? "1px solid rgba(71,191,255,0.2)" : "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={dev.deviceToken === currentDeviceToken ? "#47bfff" : "var(--text-muted)"} strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                                    <div style={{ width: 32, height: 32, borderRadius: 8, background: dev.isCurrent ? "rgba(71,191,255,0.1)" : "rgba(255,255,255,0.05)", border: dev.isCurrent ? "1px solid rgba(71,191,255,0.2)" : "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={dev.isCurrent ? "#47bfff" : "var(--text-muted)"} strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                                     </div>
                                     <div>
                                         <p style={{ margin: 0, fontSize: 12, color: "var(--text-secondary)", fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>
                                             {dev.deviceName?.slice(0, 60) || "Unknown Device"}
-                                            {dev.deviceToken === currentDeviceToken && (
+                                            {dev.isCurrent && (
                                                 <span style={{ marginLeft: 8, fontSize: 10, color: '#47bfff', background: 'rgba(71,191,255,0.1)', padding: '1px 6px', borderRadius: 20, fontWeight: 600 }}>Current</span>
                                             )}
                                         </p>
                                         <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--text-muted)", fontFamily: "'Inter', sans-serif" }}>
-                                            Trusted {new Date(dev.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                            {' · '}Last used {new Date(dev.lastUsedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                            Last used: {new Date(dev.lastUsedAt).toLocaleDateString()}
                                         </p>
                                     </div>
                                 </div>

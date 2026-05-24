@@ -1,22 +1,5 @@
 import axios from 'axios';
 
-export function setCookie(name, value, days) {
-    const expires = new Date(Date.now() + days * 864e5).toUTCString();
-    document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
-}
-
-export function getCookie(name) {
-    return document.cookie.split('; ').reduce((r, v) => {
-        const [k, ...val] = v.split('=');
-        return k === name ? decodeURIComponent(val.join('=')) : r;
-    }, '');
-}
-
-export function removeCookie(name) {
-    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-}
-
-// Device name detection
 export function getDeviceName() {
     const ua = navigator.userAgent;
     const browser = /Chrome/i.test(ua) && !/Edge/i.test(ua) ? 'Chrome'
@@ -38,24 +21,15 @@ const API_URL = 'https://docutrack-production.up.railway.app/api';
 
 const client = axios.create({
     baseURL: API_URL,
+    withCredentials: true, // sends httpOnly cookies automatically on every request
 });
 
-// Automatically attach JWT token and device token to every request
+// Automatically attach JWT token to every request
 client.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
-
-    const userRaw = localStorage.getItem('user');
-    const userId = userRaw ? JSON.parse(userRaw)?.id : null;
-    const deviceToken = userId
-        ? (localStorage.getItem(`deviceToken_${userId}`) || getCookie(`deviceToken_${userId}`))
-        : null;
-    if (deviceToken) {
-        config.headers['X-Device-Token'] = deviceToken;
-    }
-
     return config;
 });
 
@@ -66,7 +40,7 @@ client.interceptors.response.use(
         if (error.response?.status === 401) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            
+            // device_token is httpOnly cookie — browser manages it automatically
             window.location.href = '/login';
         }
         return Promise.reject(error);

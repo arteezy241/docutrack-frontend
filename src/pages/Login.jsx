@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import client, { setCookie, getDeviceName } from '../api/client';
+import client from '../api/client';
 import useAuthStore from '../store/authStore';
 import { GoogleLogin } from "@react-oauth/google";
 import useWindowWidth from '../hooks/useWindowWidth';
 import { registerPush } from '../api/push';
 import { useEffect, useRef } from "react";
+import client, { getDeviceName } from '../api/client';
+
 export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -157,11 +159,9 @@ export default function Login() {
             const res = await client.post('/auth/verify-device', {
                 email: pendingEmail,
                 otp: deviceOtp,
-                deviceName: getDeviceName()
+                deviceName: navigator.userAgent.slice(0, 100),
             });
-            const userId = res.data.user?.id;
-            localStorage.setItem(`deviceToken_${userId}`, res.data.deviceToken);
-            setCookie(`deviceToken_${userId}`, res.data.deviceToken, 90);
+            
             login(res.data.token, res.data.user);
             registerPush();
             navigate('/', { replace: true });
