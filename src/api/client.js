@@ -17,7 +17,7 @@ export function getDeviceName() {
     return `Unknown (${browser})`;
 }
 
-const API_URL = 'https://docutrack-production.up.railway.app/api';
+const API_URL = 'https://api.mheku.fyi/api';
 
 const client = axios.create({
     baseURL: API_URL,
