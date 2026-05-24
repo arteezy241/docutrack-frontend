@@ -51,8 +51,8 @@ function TwoFactorSection() {
             await client.delete("/auth/trusted-devices/" + id);
             const removed = devices.find(d => d.id === id);
             if (removed?.deviceToken === localStorage.getItem('deviceToken')) {
-                localStorage.removeItem('deviceToken');
-                removeCookie('deviceToken');
+                localStorage.removeItem(`deviceToken_${user?.id}`);
+                removeCookie(`deviceToken_${user?.id}`);
             }
             setDevices(d => d.filter(dev => dev.id !== id));
         } catch {
@@ -60,14 +60,15 @@ function TwoFactorSection() {
         }
     };
 
-    const currentDeviceToken = localStorage.getItem('deviceToken');
+    const currentDeviceToken = localStorage.getItem(`deviceToken_${user?.id}`);
     const isCurrentDeviceTrusted = devices.some(d => d.deviceToken === currentDeviceToken);
 
     const trustCurrentDevice = async () => {
         try {
             const res = await client.post('/auth/trust-device', { deviceName: getDeviceName() });
-            localStorage.setItem('deviceToken', res.data.deviceToken);
-            setCookie('deviceToken', res.data.deviceToken, 90);
+            const userId = user?.id; // from useAuthStore
+            localStorage.setItem(`deviceToken_${userId}`, res.data.deviceToken);
+            setCookie(`deviceToken_${userId}`, res.data.deviceToken, 90);
             const devicesRes = await client.get('/auth/trusted-devices');
             setDevices(devicesRes.data);
         } catch {

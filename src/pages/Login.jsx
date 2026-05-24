@@ -159,8 +159,9 @@ export default function Login() {
                 otp: deviceOtp,
                 deviceName: getDeviceName()
             });
-            localStorage.setItem('deviceToken', res.data.deviceToken);
-            setCookie('deviceToken', res.data.deviceToken, 30);
+            const userId = res.data.user?.id;
+            localStorage.setItem(`deviceToken_${userId}`, res.data.deviceToken);
+            setCookie(`deviceToken_${userId}`, res.data.deviceToken, 90);
             login(res.data.token, res.data.user);
             registerPush();
             navigate('/', { replace: true });

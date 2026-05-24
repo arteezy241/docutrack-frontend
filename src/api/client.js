@@ -47,7 +47,11 @@ client.interceptors.request.use((config) => {
         config.headers.Authorization = `Bearer ${token}`;
     }
 
-    const deviceToken = localStorage.getItem('deviceToken') || getCookie('deviceToken');
+    const userRaw = localStorage.getItem('user');
+    const userId = userRaw ? JSON.parse(userRaw)?.id : null;
+    const deviceToken = userId
+        ? (localStorage.getItem(`deviceToken_${userId}`) || getCookie(`deviceToken_${userId}`))
+        : null;
     if (deviceToken) {
         config.headers['X-Device-Token'] = deviceToken;
     }
