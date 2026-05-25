@@ -53,7 +53,9 @@ function QrContent({ status, qrValue, errorMsg, onRetry }) {
     if (status === STATUS.ERROR) {
         return (
             <div style={s.qrBox}>
-                <div style={iconCircle("#c94040")}>⚠</div>
+                <div style={iconCircle("#c94040")}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+                </div>
                 <p style={{ ...s.hint, color: "#c94040", marginTop: 8, textAlign: "center", maxWidth: 200 }}>
                     {errorMsg}
                 </p>
@@ -64,7 +66,9 @@ function QrContent({ status, qrValue, errorMsg, onRetry }) {
     if (status === STATUS.EXPIRED) {
         return (
             <div style={s.qrBox}>
-                <div style={iconCircle("#8f98a0")}>⏱</div>
+                <div style={iconCircle("#8f98a0")}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                </div>
                 <p style={{ ...s.hint, marginTop: 8 }}>Code expired</p>
                 <button onClick={onRetry} style={s.refreshBtn}>Generate new code</button>
             </div>
@@ -73,7 +77,9 @@ function QrContent({ status, qrValue, errorMsg, onRetry }) {
     if (status === STATUS.SUCCESS) {
         return (
             <div style={s.qrBox}>
-                <div style={iconCircle("#4ade80")}>✓</div>
+                <div style={iconCircle("#4ade80")}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                </div>
                 <p style={{ ...s.hint, color: "#4ade80", marginTop: 8 }}>Authenticated — signing in…</p>
             </div>
         );
@@ -87,7 +93,7 @@ function QrContent({ status, qrValue, errorMsg, onRetry }) {
             </div>
             {dimmed && (
                 <div style={s.scanOverlay}>
-                    <span style={{ fontSize: 28 }}>📱</span>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="1.5"><rect x="5" y="2" width="14" height="20" rx="2" /><line x1="12" y1="18" x2="12.01" y2="18" strokeWidth="2.5" /></svg>
                     <p style={{ color: "#f59e0b", fontSize: 13, fontWeight: 600, margin: 0 }}>Confirm on your device</p>
                 </div>
             )}

@@ -375,13 +375,29 @@ export default function Login() {
                                 Access your DocuTrack account to manage and track documents across your organization.
                             </p>
                             {[
-                                { icon: '📄', text: 'Document routing & approval' },
-                                { icon: '🔔', text: 'Real-time push notifications' },
-                                { icon: '⚡', text: 'Automated workflow engine' },
-                                { icon: '📱', text: 'QR code tracking' },
+                                {
+                                    icon: (
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
+                                    ), text: 'Document routing & approval'
+                                },
+                                {
+                                    icon: (
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 01-3.46 0" /></svg>
+                                    ), text: 'Real-time push notifications'
+                                },
+                                {
+                                    icon: (
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
+                                    ), text: 'Automated workflow engine'
+                                },
+                                {
+                                    icon: (
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="3" height="3" rx="0.5" /></svg>
+                                    ), text: 'QR code tracking'
+                                },
                             ].map((f, i) => (
                                 <div key={f.text} className="feature-item" style={{ animationDelay: `${i * 0.08}s` }}>
-                                    <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(71,191,255,0.1)', border: '1px solid rgba(71,191,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>
+                                    <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(71,191,255,0.1)', border: '1px solid rgba(71,191,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0, color: '#47bfff' }}>
                                         {f.icon}
                                     </div>
                                     <span style={{ color: '#8f98a0', fontSize: 13 }}>{f.text}</span>
