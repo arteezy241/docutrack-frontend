@@ -135,7 +135,7 @@ export default function Dashboard() {
                 {/* Header */}
                 <div style={{ marginBottom: 28, animation: 'fadeUp 0.3s ease both' }}>
                     <p style={{ margin: '0 0 4px', fontSize: 13, color: 'var(--text-accent)', fontWeight: 500 }}>
-                        {greeting()}, {displayName} 👋
+                        {greeting()}, {displayName}
                     </p>
                     <h1 style={{ margin: 0, fontSize: isMobile ? 22 : 26, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
                         Document Dashboard

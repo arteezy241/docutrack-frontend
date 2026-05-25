@@ -280,7 +280,7 @@ export default function Routing() {
                         {tab === 'routing' && (
                             <>
                                 <button className="rt-ghost-btn" onClick={() => setApplyTemplateModal(true)}>
-                                    📋 Use Template
+                                    Use Template
                                 </button>
                                 <button className="rt-primary-btn" onClick={() => { setForm(EMPTY); setModal(true); }}>
                                     + Route Document
@@ -293,10 +293,10 @@ export default function Routing() {
                 {/* Tabs */}
                 <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
                     <button className={`tab-btn ${tab === 'routing' ? 'active' : 'inactive'}`} onClick={() => setTab('routing')}>
-                        🔀 Routing
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16v16H4z" /></svg> Routing
                     </button>
                     <button className={`tab-btn ${tab === 'templates' ? 'active' : 'inactive'}`} onClick={() => setTab('templates')}>
-                        📋 Templates ({templates.length})
+                        Templates ({templates.length})
                     </button>
                 </div>
 
@@ -340,7 +340,9 @@ export default function Routing() {
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48 }}><Spinner /></div>
                                     ) : routingEvents.length === 0 ? (
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 48, gap: 8 }}>
-                                            <div style={{ fontSize: 28, opacity: 0.3 }}>📋</div>
+                                                <div style={{ opacity: 0.3 }}>
+                                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
+                                                </div>
                                             <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: 13 }}>No routing events for this document</p>
                                         </div>
                                     ) : (
@@ -446,7 +448,9 @@ export default function Routing() {
                     <div style={{ animation: 'fadeUp 0.4s ease both' }}>
                         {templates.length === 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 64, background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border)', gap: 12 }}>
-                                <div style={{ fontSize: 32, opacity: 0.3 }}>📋</div>
+                                <div style={{ opacity: 0.3 }}>
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
+                                </div>
                                 <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: 13 }}>No routing templates yet</p>
                                 <button className="rt-primary-btn" onClick={() => { setTemplateForm(EMPTY_TEMPLATE); setTemplateModal(true); }}>
                                     Create first template
