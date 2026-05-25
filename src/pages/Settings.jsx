@@ -18,20 +18,24 @@ function TwoFactorSection() {
     const [enabled, setEnabled] = useState(user?.isTwoFactorEnabled ?? false);
     const [devices, setDevices] = useState([]);
     const [loading, setLoading] = useState(true);
-
+    const [trustLoading, setTrustLoading] = useState(false);
+    const [trustSuccess, setTrustSuccess] = useState(false);
+    const [removingId, setRemovingId] = useState(null);
 
     useEffect(() => {
+        let cancelled = false;
         const load = async () => {
             try {
-                const devicesRes = await client.get("/auth/trusted-devices");
-                setDevices(devicesRes.data);
+                const res = await client.get("/auth/trusted-devices");
+                if (!cancelled) setDevices(res.data);
             } catch {
                 // ignore
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
         load();
+        return () => { cancelled = true; };
     }, []);
 
     const toggle = async () => {
@@ -46,27 +50,31 @@ function TwoFactorSection() {
     };
 
     const removeDevice = async (id) => {
-        if (!window.confirm("Remove this trusted device?")) return;
+        setRemovingId(id);
         try {
             await client.delete("/auth/trusted-devices/" + id);
-            
             setDevices(d => d.filter(dev => dev.id !== id));
         } catch {
             alert("Failed to remove device");
+        } finally {
+            setRemovingId(null);
         }
     };
 
-    
     const isCurrentDeviceTrusted = devices.some(d => d.isCurrent);
 
     const trustCurrentDevice = async () => {
+        setTrustLoading(true);
         try {
             await client.post('/auth/trust-device', { deviceName: getDeviceName() });
-            // cookie set automatically by backend
-            const devicesRes = await client.get('/auth/trusted-devices');
-            setDevices(devicesRes.data);
+            const res = await client.get("/auth/trusted-devices");
+            setDevices(res.data);
+            setTrustSuccess(true);
+            setTimeout(() => setTrustSuccess(false), 3000);
         } catch {
             alert('Failed to trust device');
+        } finally {
+            setTrustLoading(false);
         }
     };
 
@@ -74,6 +82,7 @@ function TwoFactorSection() {
 
     return (
         <div>
+            {/* 2FA Toggle */}
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
                 <div onClick={toggle} style={{ width: 44, height: 24, borderRadius: 12, position: "relative", transition: "background 0.25s", cursor: "pointer", background: enabled ? "linear-gradient(135deg,#47bfff,#4F46E5)" : "rgba(255,255,255,0.1)", boxShadow: enabled ? "0 2px 8px rgba(79,70,229,0.4)" : "none" }}>
                     <div style={{ position: "absolute", top: 3, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "transform 0.25s cubic-bezier(0.32,0.72,0,1)", transform: enabled ? "translateX(22px)" : "translateX(3px)", boxShadow: "0 1px 4px rgba(0,0,0,0.3)" }} />
@@ -84,66 +93,74 @@ function TwoFactorSection() {
             </div>
 
             {/* Trust current device */}
-            <div style={{ marginBottom: 16 }}>
+            <div style={{ marginBottom: 20 }}>
                 {isCurrentDeviceTrusted ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.15)', borderRadius: 10 }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
                         <span style={{ fontSize: 12, color: '#4ade80', fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>This device is trusted</span>
                     </div>
                 ) : (
                     <button
                         onClick={trustCurrentDevice}
-                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'rgba(71,191,255,0.06)', border: '1px solid rgba(71,191,255,0.2)', borderRadius: 10, cursor: 'pointer', width: '100%', fontFamily: "'Inter', sans-serif", transition: 'background 0.2s' }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(71,191,255,0.1)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(71,191,255,0.06)'}
+                        disabled={trustLoading}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: trustSuccess ? 'rgba(74,222,128,0.06)' : 'rgba(71,191,255,0.06)', border: trustSuccess ? '1px solid rgba(74,222,128,0.15)' : '1px solid rgba(71,191,255,0.2)', borderRadius: 10, cursor: trustLoading ? 'not-allowed' : 'pointer', width: '100%', fontFamily: "'Inter', sans-serif", transition: 'all 0.2s', opacity: trustLoading ? 0.6 : 1 }}
+                        onMouseEnter={e => { if (!trustLoading) e.currentTarget.style.background = 'rgba(71,191,255,0.1)'; }}
+                        onMouseLeave={e => { if (!trustLoading) e.currentTarget.style.background = 'rgba(71,191,255,0.06)'; }}
                     >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#47bfff" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                        <span style={{ fontSize: 12, color: '#47bfff', fontWeight: 600 }}>Trust this device</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#47bfff" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
+                        <span style={{ fontSize: 12, color: '#47bfff', fontWeight: 600 }}>
+                            {trustLoading ? 'Trusting...' : '+ Trust This Device'}
+                        </span>
                     </button>
                 )}
             </div>
 
             {/* Trusted devices list */}
-            {devices.length > 0 && (
-                <div>
-                    <p style={{ margin: "0 0 10px", fontSize: 10, fontWeight: 700, color: "var(--text-accent)", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Inter', sans-serif" }}>Trusted Devices</p>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                        {devices.map((dev) => (
-                            <div key={dev.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "var(--bg-input)", borderRadius: 10, border: dev.isCurrent ? "1px solid rgba(71,191,255,0.3)" : "1px solid var(--border)" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                    <div style={{ width: 32, height: 32, borderRadius: 8, background: dev.isCurrent ? "rgba(71,191,255,0.1)" : "rgba(255,255,255,0.05)", border: dev.isCurrent ? "1px solid rgba(71,191,255,0.2)" : "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={dev.isCurrent ? "#47bfff" : "var(--text-muted)"} strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                                    </div>
-                                    <div>
-                                        <p style={{ margin: 0, fontSize: 12, color: "var(--text-secondary)", fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>
-                                            {dev.deviceName?.slice(0, 60) || "Unknown Device"}
-                                            {dev.isCurrent && (
-                                                <span style={{ marginLeft: 8, fontSize: 10, color: '#47bfff', background: 'rgba(71,191,255,0.1)', padding: '1px 6px', borderRadius: 20, fontWeight: 600 }}>Current</span>
-                                            )}
-                                        </p>
-                                        <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--text-muted)", fontFamily: "'Inter', sans-serif" }}>
-                                            Last used: {new Date(dev.lastUsedAt).toLocaleDateString()}
-                                        </p>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => removeDevice(dev.id)}
-                                    style={{ background: "none", border: "none", color: "#f87171", fontSize: 12, cursor: "pointer", padding: "4px 8px", borderRadius: 6, fontFamily: "'Inter', sans-serif", fontWeight: 500 }}
-                                    onMouseEnter={e => e.target.style.background = "rgba(248,113,113,0.1)"}
-                                    onMouseLeave={e => e.target.style.background = "none"}
-                                >
-                                    Remove
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
+            <p style={{ margin: "0 0 10px", fontSize: 10, fontWeight: 700, color: "var(--text-accent)", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Inter', sans-serif" }}>
+                Trusted Devices {devices.length > 0 && `(${devices.length})`}
+            </p>
 
-            {devices.length === 0 && (
-                <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0, fontFamily: "'Inter', sans-serif" }}>
-                    No trusted devices yet. Devices will appear here after verifying a new device login.
-                </p>
+            {devices.length === 0 ? (
+                <div style={{ padding: '16px', background: 'var(--bg-input)', borderRadius: 10, border: '1px solid var(--border)', textAlign: 'center' }}>
+                    <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0, fontFamily: "'Inter', sans-serif" }}>
+                        No trusted devices yet. Devices appear here after verifying a new device login.
+                    </p>
+                </div>
+            ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {devices.map((dev) => (
+                        <div key={dev.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "var(--bg-input)", borderRadius: 10, border: dev.isCurrent ? "1px solid rgba(71,191,255,0.3)" : "1px solid var(--border)", transition: 'border-color 0.2s' }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                                <div style={{ width: 32, height: 32, borderRadius: 8, background: dev.isCurrent ? "rgba(71,191,255,0.1)" : "rgba(255,255,255,0.05)", border: dev.isCurrent ? "1px solid rgba(71,191,255,0.2)" : "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={dev.isCurrent ? "#47bfff" : "var(--text-muted)"} strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
+                                </div>
+                                <div style={{ minWidth: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                        <p style={{ margin: 0, fontSize: 12, color: "var(--text-secondary)", fontWeight: 600, fontFamily: "'Inter', sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {dev.deviceName?.slice(0, 40) || "Unknown Device"}
+                                        </p>
+                                        {dev.isCurrent && (
+                                            <span style={{ fontSize: 10, color: '#47bfff', background: 'rgba(71,191,255,0.1)', padding: '1px 6px', borderRadius: 20, fontWeight: 600, flexShrink: 0 }}>Current</span>
+                                        )}
+                                    </div>
+                                    <p style={{ margin: "3px 0 0", fontSize: 11, color: "var(--text-muted)", fontFamily: "'Inter', sans-serif" }}>
+                                        Trusted {new Date(dev.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                        {' · '}Last used {new Date(dev.lastUsedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => removeDevice(dev.id)}
+                                disabled={removingId === dev.id}
+                                style={{ background: "none", border: "none", color: removingId === dev.id ? "var(--text-muted)" : "#f87171", fontSize: 12, cursor: removingId === dev.id ? "not-allowed" : "pointer", padding: "4px 8px", borderRadius: 6, fontFamily: "'Inter', sans-serif", fontWeight: 500, flexShrink: 0, transition: 'color 0.2s' }}
+                                onMouseEnter={e => { if (removingId !== dev.id) e.currentTarget.style.background = "rgba(248,113,113,0.1)"; }}
+                                onMouseLeave={e => e.currentTarget.style.background = "none"}
+                            >
+                                {removingId === dev.id ? 'Removing...' : 'Remove'}
+                            </button>
+                        </div>
+                    ))}
+                </div>
             )}
         </div>
     );
