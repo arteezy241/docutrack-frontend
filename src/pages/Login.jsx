@@ -146,7 +146,11 @@ export default function Login() {
             registerPush();
             navigate('/', { replace: true });
         } catch (err) {
-            setError(err.response?.data?.error || 'Login failed');
+            if (err.response?.status === 429) {
+                setError('Too many attempts. Please wait a moment before trying again.');
+            } else {
+                setError(err.response?.data?.error || 'Login failed.');
+            }
         } finally {
             setLoading(false);
         }
