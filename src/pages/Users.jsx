@@ -12,6 +12,12 @@ const reactivateUser = (id) => client.patch("/Users/" + id + "/reactivate").then
 
 const ROLES = ["Admin", "Staff", "Viewer"];
 
+const roleStyle = (role) => ({
+    Admin:  { badge: { bg: "var(--warning-bg)",      color: "var(--warning)" },  avatar: { bg: "rgba(245,158,11,0.18)",  color: "#f59e0b" } },
+    Staff:  { badge: { bg: "rgba(71,191,255,0.12)",  color: "#47bfff" },          avatar: { bg: "rgba(71,191,255,0.18)",  color: "#47bfff" } },
+    Viewer: { badge: { bg: "rgba(143,152,160,0.12)", color: "#8f98a0" },          avatar: { bg: "rgba(143,152,160,0.15)", color: "#8f98a0" } },
+}[role] || { badge: { bg: "rgba(143,152,160,0.12)", color: "#8f98a0" }, avatar: { bg: "rgba(143,152,160,0.15)", color: "#8f98a0" } });
+
 export default function Users() {
     const qc = useQueryClient();
     const width = useWindowWidth();
@@ -23,8 +29,8 @@ export default function Users() {
     const [search, setSearch] = useState("");
     const [roleFilter, setRF] = useState("All");
 
-    const { data: users = [], isLoading } = useQuery({ queryKey: ["users"], queryFn: fetchUsers });
-    const { data: depts = [] } = useQuery({ queryKey: ["departments"], queryFn: fetchDepts });
+    const { data: users = [], isLoading } = useQuery({ queryKey: ["users"],       queryFn: fetchUsers });
+    const { data: depts = [] }             = useQuery({ queryKey: ["departments"], queryFn: fetchDepts });
 
     const reactivate = useMutation({
         mutationFn: reactivateUser,
@@ -40,7 +46,7 @@ export default function Users() {
     });
 
     const openAssign = (u) => { setSelected(u); setDeptId(u.departmentId || ""); setModal(true); };
-    const deptName = (id) => depts.find((d) => d.id === id)?.name || "—";
+    const deptName   = (id) => depts.find((d) => d.id === id)?.name || "—";
 
     const filtered = users.filter((u) => {
         const name = ((u.firstName || "") + " " + (u.lastName || "") + " " + (u.fullName || "") + " " + (u.email || "")).toLowerCase();
@@ -51,144 +57,128 @@ export default function Users() {
         if (u.firstName || u.lastName) return (u.firstName + " " + u.lastName).trim();
         return u.fullName || u.email || "Unknown";
     };
-
     const displayInitial = (u) =>
         (u.firstName?.[0] || u.fullName?.[0] || u.email?.[0] || "?").toUpperCase();
-
-    const roleStyle = (role) => ({
-        Admin: { bg: "rgba(245,158,11,0.15)", color: "#f59e0b" },
-        Staff: { bg: "rgba(71,191,255,0.12)", color: "#47bfff" },
-        Viewer: { bg: "rgba(255,255,255,0.06)", color: "#8f98a0" },
-    }[role] || { bg: "rgba(255,255,255,0.06)", color: "#8f98a0" });
 
     return (
         <AppLayout>
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
                 @keyframes dtSpin { to { transform: rotate(360deg); } }
-                @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-                .us-primary-btn {
-                    padding: 9px 18px;
-                    background: linear-gradient(135deg, #47bfff, #4F46E5);
-                    border: none; border-radius: 10px; color: #fff;
-                    font-size: 13px; font-weight: 600; cursor: pointer;
-                    font-family: 'Inter', sans-serif;
-                    transition: opacity 0.2s, transform 0.2s;
-                    box-shadow: 0 4px 12px rgba(79,70,229,0.3);
-                }
-                .us-primary-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-                .us-primary-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-                .us-ghost-btn {
-                    padding: 9px 18px;
-                    background: transparent;
-                    border: 1px solid rgba(255,255,255,0.1);
-                    border-radius: 10px; color: #8f98a0;
-                    font-size: 13px; cursor: pointer;
-                    font-family: 'Inter', sans-serif;
-                    transition: background 0.2s, color 0.2s;
-                }
-                .us-ghost-btn:hover { background: rgba(255,255,255,0.06); color: #c6d4df; }
                 .us-search {
                     padding: 9px 14px 9px 38px;
-                    background: var(--bg-input);
-                    border: 1px solid var(--border);
+                    background: var(--bg-card);
+                    border: 1px solid var(--border-default);
                     border-radius: 10px; color: var(--text-secondary);
                     font-size: 13px; outline: none;
                     font-family: 'Inter', sans-serif;
-                    transition: border-color 0.2s, background 0.2s;
+                    transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
                     box-sizing: border-box;
                 }
-                .us-search:focus { border-color: rgba(71,191,255,0.4); background: var(--bg-hover); }
-                .us-search::placeholder { color: var(--text-accent); }
+                .us-search:focus { border-color: var(--accent-from); box-shadow: 0 0 0 3px rgba(79,70,229,0.2); }
+                .us-search::placeholder { color: var(--text-tertiary); }
                 .role-filter-btn {
                     padding: 6px 12px; background: transparent;
-                    border: 1px solid var(--border);
-                    border-radius: 8px; color: var(--text-muted);
+                    border: 1px solid var(--border-subtle);
+                    border-radius: 8px; color: var(--text-tertiary);
                     font-size: 12px; cursor: pointer;
                     font-family: 'Inter', sans-serif;
-                    transition: all 0.2s; white-space: nowrap;
+                    transition: all var(--duration-fast); white-space: nowrap;
                 }
-                .role-filter-btn:hover { background: var(--bg-hover); color: var(--text-secondary); }
-                .role-filter-btn.active { background: rgba(79,70,229,0.2); border-color: rgba(79,70,229,0.5); color: #818cf8; }
-                .us-row { border-bottom: 1px solid var(--border); transition: background 0.15s; }
-                .us-row:hover { background: var(--bg-hover); }
-                .us-row:last-child { border-bottom: none; }
-                .us-icon-btn {
-                    background: none; border: none; cursor: pointer;
-                    color: var(--text-muted); font-size: 12px; font-weight: 500;
-                    padding: 5px 9px; border-radius: 7px;
-                    font-family: 'Inter', sans-serif;
-                    transition: background 0.2s, color 0.2s;
-                }
-                .us-icon-btn:hover { background: var(--bg-hover); color: var(--text-secondary); }
-                .us-icon-btn.danger:hover { background: rgba(248,113,113,0.1); color: #f87171; }
+                .role-filter-btn:hover { background: var(--bg-card-hover); color: var(--text-secondary); }
+                .role-filter-btn.active { background: rgba(79,70,229,0.18); border-color: rgba(79,70,229,0.45); color: #818cf8; }
                 .user-card {
-                    background: var(--bg-card);
-                    border: 1px solid var(--border);
-                    border-radius: 14px; overflow: hidden;
-                    transition: border-color 0.2s;
+                    background: rgba(255,255,255,0.06);
+                    backdrop-filter: blur(24px) saturate(180%);
+                    -webkit-backdrop-filter: blur(24px) saturate(180%);
+                    border: 1px solid rgba(255,255,255,0.12);
+                    border-radius: 20px; overflow: hidden;
+                    box-shadow: 0 8px 40px rgba(0,0,0,0.40), 0 1px 0 rgba(255,255,255,0.08) inset;
+                    transition: border-color var(--duration-fast), box-shadow var(--duration-fast), transform var(--duration-fast);
                     animation: fadeUp 0.4s ease both;
+                    display: flex; flex-direction: column;
                 }
-                .user-card:hover { border-color: var(--border-input); }
-                .us-ghost-btn {
-                    padding: 9px 18px; background: transparent;
-                    border: 1px solid var(--border-input);
-                    border-radius: 10px; color: var(--text-muted);
-                    font-size: 13px; cursor: pointer;
-                    font-family: 'Inter', sans-serif;
-                    transition: background 0.2s, color 0.2s;
+                .user-card:hover { border-color: rgba(255,255,255,0.20); box-shadow: 0 14px 48px rgba(0,0,0,0.50), 0 1px 0 rgba(255,255,255,0.12) inset; transform: translateY(-2px); }
+                .action-icon-btn {
+                    display: inline-flex; align-items: center; justify-content: center;
+                    width: 32px; height: 32px; border-radius: 50%;
+                    background: none; border: 1px solid var(--border-subtle);
+                    cursor: pointer; color: var(--text-tertiary);
+                    transition: background var(--duration-fast), color var(--duration-fast), border-color var(--duration-fast);
+                    flex-shrink: 0;
                 }
-                .us-ghost-btn:hover { background: var(--bg-hover); color: var(--text-secondary); }
+                .action-icon-btn:hover { background: var(--bg-card-hover); color: var(--text-secondary); border-color: var(--border-default); }
+                .action-icon-btn.danger:hover   { background: var(--danger-bg);  color: var(--danger);  border-color: rgba(248,113,113,0.3); }
+                .action-icon-btn.success:hover  { background: var(--success-bg); color: var(--success); border-color: rgba(52,211,153,0.3); }
                 .modal-overlay {
                     position: fixed; inset: 0;
-                    background: rgba(0,0,0,0.7);
-                    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+                    background: rgba(0,0,0,0.6);
+                    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
                     display: flex; align-items: center; justify-content: center;
                     z-index: 100; padding: 20px;
                 }
                 .modal-box {
-                    background: var(--modal-bg);
-                    border: 1px solid var(--border);
-                    border-radius: 16px; width: 100%;
-                    max-width: 400px; max-height: 90vh;
+                    background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+                    border-radius: 16px; width: 100%; max-width: 480px; max-height: 90vh;
                     display: flex; flex-direction: column;
-                    box-shadow: 0 24px 48px rgba(0,0,0,0.4);
-                    animation: fadeUp 0.2s ease;
+                    box-shadow: var(--shadow-lg); animation: scaleIn 0.2s var(--ease-out) both;
                 }
                 .modal-close-btn {
-                    background: var(--bg-input); border: none;
-                    color: var(--text-muted); width: 28px; height: 28px;
-                    border-radius: 50%; cursor: pointer;
                     display: flex; align-items: center; justify-content: center;
-                    font-size: 14px; transition: background 0.2s, color 0.2s;
+                    width: 28px; height: 28px; border-radius: 50%;
+                    background: var(--bg-card); border: 1px solid var(--border-subtle);
+                    color: var(--text-tertiary); cursor: pointer;
+                    transition: background var(--duration-fast), color var(--duration-fast);
                 }
-                .modal-close-btn:hover { background: var(--bg-hover); color: var(--text-secondary); }
+                .modal-close-btn:hover { background: var(--bg-card-hover); color: var(--text-secondary); }
+                .us-ghost-btn {
+                    height: 40px; padding: 0 16px; background: transparent;
+                    border: 1px solid var(--border-default);
+                    border-radius: 10px; color: var(--text-secondary);
+                    font-size: 13px; cursor: pointer;
+                    font-family: 'Inter', sans-serif;
+                    transition: background var(--duration-fast), color var(--duration-fast);
+                }
+                .us-ghost-btn:hover { background: var(--bg-card-hover); color: var(--text-primary); }
                 .us-input {
-                    width: 100%; padding: 9px 12px;
-                    background: var(--bg-input);
-                    border: 1px solid var(--border-input);
-                    border-radius: 8px; color: var(--text-secondary);
-                    font-size: 13px; outline: none; box-sizing: border-box;
-                    font-family: 'Inter', sans-serif; transition: border-color 0.2s;
+                    width: 100%; height: 40px; padding: 0 12px;
+                    background: var(--bg-card);
+                    border: 1px solid var(--border-default);
+                    border-radius: 10px; color: var(--text-secondary);
+                    font-size: 14px; outline: none; box-sizing: border-box;
+                    font-family: 'Inter', sans-serif;
+                    transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
                 }
-                .us-input:focus { border-color: rgba(71,191,255,0.4); }
+                .us-input:focus { border-color: var(--accent-from); box-shadow: 0 0 0 3px rgba(79,70,229,0.2); }
+                select.us-input { cursor: pointer; }
+                .modal-submit-btn {
+                    height: 40px; border: none; border-radius: 10px; color: #fff;
+                    background: var(--accent-gradient);
+                    font-size: 14px; font-weight: 600; cursor: pointer;
+                    font-family: 'Inter', sans-serif;
+                    transition: opacity var(--duration-base), transform var(--duration-base);
+                    box-shadow: var(--shadow-accent);
+                }
+                .modal-submit-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+                .modal-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
             `}</style>
 
-            <div style={{ padding: isMobile ? '20px 16px' : '28px 28px', color: 'var(--text-secondary)', fontFamily: "'Inter', sans-serif" }}>
+            <div style={{ padding: isMobile ? '20px 16px' : '28px 28px', fontFamily: "'Inter', sans-serif" }}>
 
                 {/* Header */}
-                <div style={{ marginBottom: 24, animation: 'fadeUp 0.3s ease both' }}>
-                    <h1 style={{ margin: 0, fontSize: isMobile ? 22 : 26, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Users</h1>
-                    <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>{users.length} registered users</p>
+                <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', flexDirection: isMobile ? 'column' : 'row', gap: 12, marginBottom: 24, animation: 'fadeUp 0.3s ease both' }}>
+                    <div>
+                        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Users</h1>
+                        <p style={{ margin: '4px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>{users.length} registered users</p>
+                    </div>
                 </div>
 
                 {/* Filter bar */}
                 <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 12, marginBottom: 20, animation: 'fadeUp 0.35s ease both' }}>
                     <div style={{ position: 'relative', flex: 1, maxWidth: isMobile ? '100%' : 320 }}>
-                        <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#4a7fa5', pointerEvents: 'none' }}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                        <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)', pointerEvents: 'none' }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                         </span>
-                        <input className="us-search" style={{ width: '100%' }} placeholder="Search by name or email..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                        <input className="us-search" style={{ width: '100%' }} placeholder="Search by name or email…" value={search} onChange={(e) => setSearch(e.target.value)} />
                     </div>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         {["All", ...ROLES].map((r) => (
@@ -197,114 +187,90 @@ export default function Users() {
                     </div>
                 </div>
 
-                {/* Mobile card view */}
-                {isMobile ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        {isLoading ? (
-                            <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}><Spinner /></div>
-                        ) : filtered.length === 0 ? (
-                            <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}>
-                                <p style={{ color: '#8f98a0', margin: 0 }}>No users found</p>
-                            </div>
-                        ) : filtered.map((u, i) => {
+                {/* Card grid */}
+                {isLoading ? (
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}><Spinner /></div>
+                ) : filtered.length === 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 64, background: 'var(--bg-surface)', borderRadius: 16, border: '1px solid var(--border-subtle)', gap: 8 }}>
+                        <div style={{ opacity: 0.3 }}>
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                        </div>
+                        <p style={{ color: 'var(--text-tertiary)', margin: 0, fontSize: 13 }}>No users found</p>
+                    </div>
+                ) : (
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+                        gap: 16,
+                        animation: 'fadeUp 0.4s ease both',
+                    }}>
+                        {filtered.map((u, i) => {
                             const rs = roleStyle(u.role);
+                            const inactive = !u.isActive;
                             return (
-                                <div key={u.id} className="user-card" style={{ animationDelay: `${i * 0.05}s` }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', gap: 8 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                                            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#47bfff,#4F46E5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 13, fontWeight: 700, flexShrink: 0, boxShadow: '0 2px 8px rgba(79,70,229,0.3)' }}>
+                                <div key={u.id} className="user-card" style={{ animationDelay: `${i * 0.04}s`, opacity: inactive ? 0.5 : 1 }}>
+                                    {/* Card body */}
+                                    <div style={{ padding: '20px 20px 16px', flex: 1 }}>
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                                            {/* Avatar */}
+                                            <div style={{
+                                                width: 48, height: 48, borderRadius: '50%', flexShrink: 0,
+                                                background: rs.avatar.bg, color: rs.avatar.color,
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                fontSize: 18, fontWeight: 700,
+                                            }}>
                                                 {displayInitial(u)}
                                             </div>
-                                            <div style={{ minWidth: 0 }}>
-                                                <div style={{ fontSize: 14, fontWeight: 600, color: '#e8edf2', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName(u)}</div>
-                                                <div style={{ fontSize: 11, color: '#8f98a0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
+                                            {/* Info */}
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 2 }}>
+                                                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {displayName(u)}
+                                                    </span>
+                                                    {inactive && (
+                                                        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--radius-full)', background: 'var(--danger-bg)', color: 'var(--danger)', flexShrink: 0 }}>
+                                                            Inactive
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div style={{ fontSize: 12, color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 10 }}>
+                                                    {u.email}
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                                    <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 'var(--radius-full)', background: rs.badge.bg, color: rs.badge.color }}>
+                                                        {u.role || 'Staff'}
+                                                    </span>
+                                                    {u.departmentId && (
+                                                        <span style={{ fontSize: 11, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                                                            {deptName(u.departmentId)}
+                                                        </span>
+                                                    )}
+                                                    {!u.departmentId && (
+                                                        <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>No department</span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                        <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20, background: rs.bg, color: rs.color, flexShrink: 0 }}>
-                                            {u.role || 'Staff'}
-                                        </span>
                                     </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderTop: '1px solid var(--border)', background: 'var(--bg-deep)' }}>
-                                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{deptName(u.departmentId)}</span>
-                                        <div style={{ display: 'flex', gap: 4 }}>
-                                            <button className="us-icon-btn" onClick={() => openAssign(u)}>Assign Dept</button>
-                                            {u.isActive ? (
-                                                <button className="us-icon-btn danger" onClick={() => { if (window.confirm('Deactivate ' + displayName(u) + '? They will no longer be able to log in.')) remove.mutate(u.id); }}>Deactivate</button>
-                                            ) : (
-                                                <button className="us-icon-btn success" onClick={() => { if (window.confirm('Reactivate ' + displayName(u) + '?')) reactivate.mutate(u.id); }}>Reactivate</button>
-                                            )}
-                                        </div>
+                                    {/* Card footer */}
+                                    <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                                        <button className="action-icon-btn" title="Assign department" onClick={() => openAssign(u)}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+                                        </button>
+                                        {u.isActive ? (
+                                            <button className="action-icon-btn danger" title="Deactivate user" onClick={() => { if (window.confirm('Deactivate ' + displayName(u) + '? They will no longer be able to log in.')) remove.mutate(u.id); }}>
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                                            </button>
+                                        ) : (
+                                            <button className="action-icon-btn success" title="Reactivate user" onClick={() => { if (window.confirm('Reactivate ' + displayName(u) + '?')) reactivate.mutate(u.id); }}>
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/><line x1="20" y1="8" x2="20" y2="14"/></svg>
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             );
                         })}
-                    </div>
-                ) : (
-                    // Desktop table view
-                        <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border)', overflow: 'hidden', animation: 'fadeUp 0.4s ease both' }}>
-                        {isLoading ? (
-                            <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}><Spinner /></div>
-                        ) : filtered.length === 0 ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 48, gap: 8 }}>
-                                        <div style={{ fontSize: 28, opacity: 0.3 }}>👥</div>
-                                        <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: 13 }}>No users found</p>
-                                    </div>
-                        ) : (
-                            <div style={{ overflowX: 'auto' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                    <thead>
-                                                    <tr style={{ background: 'var(--table-head)' }}>
-                                                        {['User', 'Email', 'Role', 'Department', ''].map((h) => (
-                                                            <th key={h} style={{ padding: '11px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-accent)', letterSpacing: '0.07em', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
-                                                                {h}
-                                                            </th>
-                                                        ))}
-                                                    </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filtered.map((u, i) => {
-                                            const rs = roleStyle(u.role);
-                                            return (
-                                                <tr key={u.id} className="us-row" style={{ animationDelay: `${i * 0.03}s` }}>
-                                                    <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#47bfff,#4F46E5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0, boxShadow: '0 2px 6px rgba(79,70,229,0.25)' }}>
-                                                                {displayInitial(u)}
-                                                            </div>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                                <span style={{ fontSize: 13, fontWeight: 600, color: u.isActive ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                                                                    {displayName(u)}
-                                                                </span>
-                                                                {!u.isActive && (
-                                                                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20, background: 'rgba(248,113,113,0.1)', color: '#f87171' }}>
-                                                                        Inactive
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: 'var(--text-muted)', fontSize: 13 }}>{u.email}</td>
-                                                    <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
-                                                        <span style={{ fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20, background: rs.bg, color: rs.color }}>
-                                                            {u.role || 'Staff'}
-                                                        </span>
-                                                    </td>
-                                                    <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: 'var(--text-muted)', fontSize: 12 }}>{deptName(u.departmentId)}</td>
-                                                    <td style={{ padding: '12px 16px', verticalAlign: 'middle', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                                                        <button className="us-icon-btn" onClick={() => openAssign(u)}>Assign Dept</button>
-                                                        {u.isActive ? (
-                                                            <button className="us-icon-btn danger" onClick={() => { if (window.confirm('Deactivate ' + displayName(u) + '? They will no longer be able to log in.')) remove.mutate(u.id); }}>Deactivate</button>
-                                                        ) : (
-                                                            <button className="us-icon-btn success" onClick={() => { if (window.confirm('Reactivate ' + displayName(u) + '?')) reactivate.mutate(u.id); }}>Reactivate</button>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
                     </div>
                 )}
             </div>
@@ -313,28 +279,32 @@ export default function Users() {
             {modal && selected && (
                 <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setModal(false)}>
                     <div className="modal-box">
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', borderBottom: '1px solid var(--border)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', borderBottom: '1px solid var(--border-subtle)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                                <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#47bfff,#4F46E5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
-                                    {displayInitial(selected)}
-                                </div>
-                                <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#e8edf2', fontFamily: "'Inter', sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {(() => { const rs = roleStyle(selected.role); return (
+                                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: rs.avatar.bg, color: rs.avatar.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
+                                        {displayInitial(selected)}
+                                    </div>
+                                ); })()}
+                                <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {displayName(selected)}
                                 </h2>
                             </div>
-                            <button className="modal-close-btn" onClick={() => setModal(false)}>✕</button>
+                            <button className="modal-close-btn" onClick={() => setModal(false)}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
                         </div>
-                        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14, fontFamily: "'Inter', sans-serif" }}>
+                        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
                             <Field label="Assign Department">
                                 <select className="us-input" value={deptId} onChange={(e) => setDeptId(e.target.value)}>
                                     <option value="">Unassigned</option>
                                     {depts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                                 </select>
                             </Field>
-                            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+                            <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
                                 <button className="us-ghost-btn" onClick={() => setModal(false)}>Cancel</button>
-                                <button className="us-primary-btn" disabled={assign.isPending} onClick={() => assign.mutate({ id: selected.id, departmentId: deptId || null })}>
-                                    {assign.isPending ? 'Saving...' : 'Save'}
+                                <button className="modal-submit-btn" style={{ flex: 1 }} disabled={assign.isPending} onClick={() => assign.mutate({ id: selected.id, departmentId: deptId || null })}>
+                                    {assign.isPending ? 'Saving…' : 'Save Assignment'}
                                 </button>
                             </div>
                         </div>
@@ -348,7 +318,7 @@ export default function Users() {
 function Field({ label, children }) {
     return (
         <div>
-            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-accent)', letterSpacing: '0.05em', margin: '0 0 4px', display: 'block', fontFamily: "'Inter', sans-serif" }}>{label}</label>
+            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.05em', margin: '0 0 4px', display: 'block', fontFamily: "'Inter', sans-serif" }}>{label}</label>
             <div style={{ marginTop: 4 }}>{children}</div>
         </div>
     );

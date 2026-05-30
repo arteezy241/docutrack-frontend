@@ -5,15 +5,15 @@ import client from "../api/client";
 import useWindowWidth from "../hooks/useWindowWidth";
 import useAuthStore from "../store/authStore";
 
-const fetchDepts = () => client.get("/Departments").then((r) => r.data);
-const fetchUsers = () => client.get("/Users").then((r) => r.data);
+const fetchDepts    = () => client.get("/Departments").then((r) => r.data);
+const fetchUsers    = () => client.get("/Users").then((r) => r.data);
 const fetchColleges = () => client.get("/colleges").then((r) => r.data);
-const createDept = (body) => client.post("/Departments", body).then((r) => r.data);
-const deleteDept = (id) => client.delete("/Departments/" + id).then((r) => r.data);
+const createDept    = (body) => client.post("/Departments", body).then((r) => r.data);
+const deleteDept    = (id)   => client.delete("/Departments/" + id).then((r) => r.data);
 const createCollege = (body) => client.post("/colleges", body).then((r) => r.data);
-const deleteCollege = (id) => client.delete("/colleges/" + id).then((r) => r.data);
+const deleteCollege = (id)   => client.delete("/colleges/" + id).then((r) => r.data);
 
-const EMPTY_DEPT = { name: "", description: "", collegeId: "" };
+const EMPTY_DEPT    = { name: "", description: "", collegeId: "" };
 const EMPTY_COLLEGE = { name: "", code: "", description: "" };
 
 export default function Departments() {
@@ -23,18 +23,17 @@ export default function Departments() {
     const { user } = useAuthStore();
     const isAdmin = user?.role === 'Admin';
 
-    const [deptModal, setDeptModal] = useState(false);
+    const [deptModal,    setDeptModal]    = useState(false);
     const [collegeModal, setCollegeModal] = useState(false);
-    const [deptForm, setDeptForm] = useState(EMPTY_DEPT);
-    const [collegeForm, setCollegeForm] = useState(EMPTY_COLLEGE);
-    const [expandedCollege, setExpandedCollege] = useState(null);
+    const [deptForm,     setDeptForm]     = useState(EMPTY_DEPT);
+    const [collegeForm,  setCollegeForm]  = useState(EMPTY_COLLEGE);
     const [expandedDept, setExpandedDept] = useState(null);
     const [search, setSearch] = useState("");
-    const [view, setView] = useState('colleges'); // 'colleges' | 'departments'
+    const [view,   setView]   = useState('colleges');
 
-    const { data: depts = [], isLoading: deptsLoading } = useQuery({ queryKey: ["departments"], queryFn: fetchDepts });
-    const { data: users = [] } = useQuery({ queryKey: ["users"], queryFn: fetchUsers });
-    const { data: colleges = [], isLoading: collegesLoading } = useQuery({ queryKey: ["colleges"], queryFn: fetchColleges });
+    const { data: depts   = [], isLoading: deptsLoading }   = useQuery({ queryKey: ["departments"], queryFn: fetchDepts });
+    const { data: users   = [] }                             = useQuery({ queryKey: ["users"],       queryFn: fetchUsers });
+    const { data: colleges = [], isLoading: collegesLoading } = useQuery({ queryKey: ["colleges"],   queryFn: fetchColleges });
 
     const createDeptMut = useMutation({
         mutationFn: createDept,
@@ -56,7 +55,7 @@ export default function Departments() {
     const setD = (k) => (e) => setDeptForm((f) => ({ ...f, [k]: e.target.value }));
     const setC = (k) => (e) => setCollegeForm((f) => ({ ...f, [k]: e.target.value }));
     const membersOf = (deptId) => users.filter((u) => u.departmentId === deptId);
-    const deptsOf = (collegeId) => depts.filter((d) => d.collegeId === collegeId);
+    const deptsOf   = (collegeId) => depts.filter((d) => d.collegeId === collegeId);
     const unassignedDepts = depts.filter((d) => !d.collegeId);
 
     const filteredColleges = colleges.filter((c) =>
@@ -73,138 +72,157 @@ export default function Departments() {
     return (
         <AppLayout>
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
                 @keyframes dtSpin { to { transform: rotate(360deg); } }
-                @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
                 .dp-primary-btn {
-                    padding: 9px 18px;
-                    background: linear-gradient(135deg, #47bfff, #4F46E5);
-                    border: none; border-radius: 10px; color: #fff;
+                    display: inline-flex; align-items: center; gap: 7px;
+                    height: 36px; padding: 0 16px;
+                    background: var(--accent-gradient);
+                    border: none; border-radius: 12px; color: #fff;
                     font-size: 13px; font-weight: 600; cursor: pointer;
                     font-family: 'Inter', sans-serif;
-                    transition: opacity 0.2s, transform 0.2s;
-                    box-shadow: 0 4px 12px rgba(79,70,229,0.3);
-                    white-space: nowrap;
+                    transition: opacity var(--duration-base), transform var(--duration-base);
+                    box-shadow: var(--shadow-accent); white-space: nowrap;
                 }
-                .dp-primary-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+                .dp-primary-btn:hover { opacity: 0.88; transform: translateY(-1px); }
                 .dp-primary-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
                 .dp-ghost-btn {
-                    padding: 9px 18px; background: transparent;
-                    border: 1px solid var(--border-input);
-                    border-radius: 10px; color: var(--text-muted);
-                    font-size: 13px; cursor: pointer;
-                    font-family: 'Inter', sans-serif;
-                    transition: background 0.2s, color 0.2s;
+                    display: inline-flex; align-items: center; gap: 6px;
+                    height: 36px; padding: 0 16px;
+                    background: transparent; border: 1px solid var(--border-default);
+                    border-radius: 10px; color: var(--text-secondary);
+                    font-size: 13px; cursor: pointer; font-family: 'Inter', sans-serif;
+                    transition: background var(--duration-fast), color var(--duration-fast);
                 }
-                .dp-ghost-btn:hover { background: var(--bg-hover); color: var(--text-secondary); }
+                .dp-ghost-btn:hover { background: var(--bg-card-hover); color: var(--text-primary); }
                 .dp-search {
                     padding: 9px 14px 9px 38px;
-                    background: var(--bg-input); border: 1px solid var(--border);
+                    background: var(--bg-card); border: 1px solid var(--border-default);
                     border-radius: 10px; color: var(--text-secondary);
-                    font-size: 13px; outline: none;
-                    font-family: 'Inter', sans-serif;
-                    transition: border-color 0.2s;
+                    font-size: 13px; outline: none; font-family: 'Inter', sans-serif;
+                    transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
                     box-sizing: border-box; width: 100%;
                 }
-                .dp-search:focus { border-color: rgba(71,191,255,0.4); }
-                .dp-search::placeholder { color: var(--text-accent); }
-                .dept-card {
-                    background: var(--bg-card); border: 1px solid var(--border);
-                    border-radius: 16px; overflow: hidden;
-                    transition: border-color 0.2s; animation: fadeUp 0.4s ease both;
+                .dp-search:focus { border-color: var(--accent-from); box-shadow: 0 0 0 3px rgba(79,70,229,0.2); }
+                .dp-search::placeholder { color: var(--text-tertiary); }
+                /* Tree rows */
+                .college-row {
+                    display: flex; align-items: center; justify-content: space-between;
+                    padding: 14px 20px; gap: 12px;
+                    background: var(--bg-surface);
+                    border-left: 3px solid var(--accent-from);
+                    border-radius: 12px; margin-bottom: 2px;
+                    transition: background var(--duration-fast);
                 }
-                .dept-card:hover { border-color: var(--border-input); }
-                .college-card {
-                    background: var(--bg-card); border: 1px solid var(--border);
-                    border-radius: 16px; overflow: hidden;
-                    transition: border-color 0.2s; animation: fadeUp 0.4s ease both;
+                .college-row:hover { background: var(--bg-card); }
+                .dept-row {
+                    display: flex; align-items: center; justify-content: space-between;
+                    padding: 11px 14px; gap: 10px;
+                    background: var(--bg-card);
+                    border: 1px solid var(--border-subtle);
+                    border-radius: 10px;
+                    transition: background var(--duration-fast), border-color var(--duration-fast);
                 }
-                .college-card:hover { border-color: rgba(71,191,255,0.3); }
+                .dept-row:hover { background: var(--bg-card-hover); border-color: var(--border-default); }
                 .expand-btn {
-                    background: var(--bg-input); border: 1px solid var(--border);
-                    cursor: pointer; color: var(--text-accent);
-                    width: 28px; height: 28px; border-radius: 8px;
                     display: flex; align-items: center; justify-content: center;
-                    font-size: 11px; transition: background 0.2s, color 0.2s; flex-shrink: 0;
+                    width: 28px; height: 28px; border-radius: 8px;
+                    background: var(--bg-card); border: 1px solid var(--border-subtle);
+                    cursor: pointer; color: var(--text-tertiary);
+                    transition: background var(--duration-fast), color var(--duration-fast);
+                    flex-shrink: 0;
                 }
-                .expand-btn:hover { background: rgba(71,191,255,0.1); color: #47bfff; }
-                .delete-btn {
-                    background: none; border: none; cursor: pointer;
-                    color: var(--text-muted); font-size: 12px; font-weight: 500;
-                    padding: 5px 10px; border-radius: 8px;
-                    font-family: 'Inter', sans-serif;
-                    transition: background 0.2s, color 0.2s;
+                .expand-btn:hover { background: var(--bg-card-hover); color: var(--text-secondary); }
+                .action-icon-btn {
+                    display: inline-flex; align-items: center; justify-content: center;
+                    width: 28px; height: 28px; border-radius: 8px;
+                    background: none; border: 1px solid var(--border-subtle);
+                    cursor: pointer; color: var(--text-tertiary);
+                    transition: background var(--duration-fast), color var(--duration-fast), border-color var(--duration-fast);
+                    flex-shrink: 0;
                 }
-                .delete-btn:hover { background: rgba(248,113,113,0.1); color: #f87171; }
+                .action-icon-btn:hover { background: var(--bg-card-hover); color: var(--text-secondary); }
+                .action-icon-btn.danger:hover { background: var(--danger-bg); color: var(--danger); border-color: rgba(248,113,113,0.3); }
                 .tab-btn {
-                    padding: 7px 16px; border-radius: 8px; border: none;
+                    padding: 7px 16px; border-radius: 8px;
                     font-size: 12px; font-weight: 600; cursor: pointer;
-                    font-family: 'Inter', sans-serif; transition: all 0.2s;
+                    font-family: 'Inter', sans-serif; transition: all var(--duration-fast);
                 }
                 .tab-btn.active {
-                    background: linear-gradient(135deg, rgba(71,191,255,0.2), rgba(79,70,229,0.2));
-                    color: #47bfff; border: 1px solid rgba(71,191,255,0.3);
+                    background: linear-gradient(135deg, rgba(71,191,255,0.18), rgba(79,70,229,0.18));
+                    color: var(--accent-to); border: 1px solid rgba(71,191,255,0.3);
                 }
                 .tab-btn.inactive {
-                    background: transparent; color: var(--text-muted);
-                    border: 1px solid var(--border);
+                    background: transparent; color: var(--text-tertiary);
+                    border: 1px solid var(--border-subtle);
                 }
-                .tab-btn.inactive:hover { background: var(--bg-hover); color: var(--text-secondary); }
+                .tab-btn.inactive:hover { background: var(--bg-card-hover); color: var(--text-secondary); }
+                /* Flat table */
+                .flat-row { border-bottom: 1px solid var(--border-subtle); transition: background var(--duration-fast); }
+                .flat-row:hover { background: var(--bg-card-hover); }
+                .flat-row:last-child { border-bottom: none; }
+                /* Modal */
                 .modal-overlay {
-                    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
-                    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+                    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+                    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
                     display: flex; align-items: center; justify-content: center;
                     z-index: 100; padding: 20px;
                 }
                 .modal-box {
-                    background: var(--modal-bg); border: 1px solid var(--border);
-                    border-radius: 16px; width: 100%; max-width: 440px;
+                    background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+                    border-radius: 16px; width: 100%; max-width: 480px;
                     display: flex; flex-direction: column;
-                    box-shadow: 0 24px 48px rgba(0,0,0,0.4);
-                    animation: fadeUp 0.2s ease;
+                    box-shadow: var(--shadow-lg); animation: scaleIn 0.2s var(--ease-out) both;
                 }
                 .modal-close-btn {
-                    background: var(--bg-input); border: none;
-                    color: var(--text-muted); width: 28px; height: 28px;
-                    border-radius: 50%; cursor: pointer;
                     display: flex; align-items: center; justify-content: center;
-                    font-size: 14px; transition: background 0.2s;
+                    width: 28px; height: 28px; border-radius: 50%;
+                    background: var(--bg-card); border: 1px solid var(--border-subtle);
+                    color: var(--text-tertiary); cursor: pointer;
+                    transition: background var(--duration-fast), color var(--duration-fast);
                 }
-                .modal-close-btn:hover { background: var(--bg-hover); }
+                .modal-close-btn:hover { background: var(--bg-card-hover); color: var(--text-secondary); }
                 .dp-input {
-                    width: 100%; padding: 9px 12px;
-                    background: var(--bg-input); border: 1px solid var(--border-input);
-                    border-radius: 8px; color: var(--text-secondary);
-                    font-size: 13px; outline: none; box-sizing: border-box;
-                    font-family: 'Inter', sans-serif; transition: border-color 0.2s;
-                }
-                .dp-input:focus { border-color: rgba(71,191,255,0.4); }
-                .dp-select {
-                    width: 100%; padding: 9px 12px;
-                    background: var(--bg-input); border: 1px solid var(--border-input);
-                    border-radius: 8px; color: var(--text-secondary);
-                    font-size: 13px; outline: none; box-sizing: border-box;
+                    width: 100%; height: 40px; padding: 0 12px;
+                    background: var(--bg-card); border: 1px solid var(--border-default);
+                    border-radius: 10px; color: var(--text-secondary);
+                    font-size: 14px; outline: none; box-sizing: border-box;
                     font-family: 'Inter', sans-serif;
+                    transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
                 }
+                .dp-input:focus { border-color: var(--accent-from); box-shadow: 0 0 0 3px rgba(79,70,229,0.2); }
+                textarea.dp-input { height: auto; padding: 10px 12px; }
+                select.dp-input { cursor: pointer; }
+                .modal-submit-btn {
+                    height: 40px; border: none; border-radius: 10px; color: #fff;
+                    background: var(--accent-gradient);
+                    font-size: 14px; font-weight: 600; cursor: pointer;
+                    font-family: 'Inter', sans-serif;
+                    transition: opacity var(--duration-base), transform var(--duration-base);
+                    box-shadow: var(--shadow-accent);
+                }
+                .modal-submit-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+                .modal-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
             `}</style>
 
-            <div style={{ padding: isMobile ? '20px 16px' : '28px 28px', color: 'var(--text-secondary)', fontFamily: "'Inter', sans-serif" }}>
+            <div style={{ padding: isMobile ? '20px 16px' : '28px 28px', fontFamily: "'Inter', sans-serif" }}>
 
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', flexDirection: isMobile ? 'column' : 'row', gap: 12, marginBottom: 20, animation: 'fadeUp 0.3s ease both' }}>
                     <div>
-                        <h1 style={{ margin: 0, fontSize: isMobile ? 22 : 26, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Departments</h1>
-                        <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
-                            {colleges.length} colleges · {depts.length} departments · {users.length} users
+                        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Departments</h1>
+                        <p style={{ margin: '4px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>
+                            {colleges.length} college{colleges.length !== 1 ? 's' : ''} · {depts.length} department{depts.length !== 1 ? 's' : ''}
                         </p>
                     </div>
                     {isAdmin && (
                         <div style={{ display: 'flex', gap: 8 }}>
                             <button className="dp-ghost-btn" onClick={() => { setCollegeForm(EMPTY_COLLEGE); setCollegeModal(true); }}>
-                                + College
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                College
                             </button>
                             <button className="dp-primary-btn" onClick={() => { setDeptForm(EMPTY_DEPT); setDeptModal(true); }}>
-                                + Department
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                Department
                             </button>
                         </div>
                     )}
@@ -216,105 +234,92 @@ export default function Departments() {
                         By College
                     </button>
                     <button className={`tab-btn ${view === 'departments' ? 'active' : 'inactive'}`} onClick={() => setView('departments')}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: 6 }}><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
                         All Departments
                     </button>
                 </div>
 
                 {/* Search */}
                 <div style={{ position: 'relative', marginBottom: 20, animation: 'fadeUp 0.35s ease both' }}>
-                    <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#4a7fa5', pointerEvents: 'none' }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                    <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)', pointerEvents: 'none' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                     </span>
-                    <input className="dp-search" placeholder={view === 'colleges' ? "Search colleges..." : "Search departments..."} value={search} onChange={(e) => setSearch(e.target.value)} />
+                    <input className="dp-search" placeholder={view === 'colleges' ? "Search colleges…" : "Search departments…"} value={search} onChange={(e) => setSearch(e.target.value)} />
                 </div>
 
                 {isLoading ? (
                     <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}><Spinner /></div>
                 ) : view === 'colleges' ? (
 
-                    /* ── College Tree View ── */
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {filteredColleges.map((college, i) => {
+                    /* ── Tree View ── */
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, animation: 'fadeUp 0.4s ease both' }}>
+                        {filteredColleges.length === 0 && (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 48, background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20, gap: 8 }}>
+                                <div style={{ opacity: 0.3 }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></div>
+                                <p style={{ color: 'var(--text-tertiary)', margin: 0, fontSize: 13 }}>No colleges found</p>
+                            </div>
+                        )}
+
+                        {filteredColleges.map((college) => {
                             const collegeDepts = deptsOf(college.id);
-                            const isCollegeExpanded = expandedCollege === college.id;
                             return (
-                                <div key={college.id} className="college-card" style={{ animationDelay: `${i * 0.06}s` }}>
-                                    {/* College header */}
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 18px', gap: 8 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0, flex: 1 }}>
-                                            <div style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg, rgba(71,191,255,0.15), rgba(79,70,229,0.15))', border: '1px solid rgba(71,191,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z" /><path d="M6 12v5c3 3 9 3 12 0v-5" /></svg>
-                                            </div>
-                                            <div style={{ minWidth: 0 }}>
-                                                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                    {college.name}
-                                                </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
-                                                    <span style={{ fontSize: 11, fontWeight: 700, color: '#47bfff', background: 'rgba(71,191,255,0.1)', border: '1px solid rgba(71,191,255,0.2)', padding: '1px 7px', borderRadius: 20 }}>
+                                <div key={college.id}>
+                                    {/* College parent row */}
+                                    <div className="college-row">
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
+                                            <div>
+                                                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{college.name}</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                                                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent-to)', background: 'rgba(71,191,255,0.1)', border: '1px solid rgba(71,191,255,0.2)', padding: '1px 7px', borderRadius: 20 }}>
                                                         {college.code}
                                                     </span>
-                                                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                                                        {collegeDepts.length} department{collegeDepts.length !== 1 ? 's' : ''}
+                                                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                                                        {collegeDepts.length} dept{collegeDepts.length !== 1 ? 's' : ''}
                                                     </span>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                                            {isAdmin && (
-                                                <button className="delete-btn" onClick={() => { if (window.confirm('Delete ' + college.name + '?')) removeCollege.mutate(college.id); }}>
-                                                    Delete
-                                                </button>
-                                            )}
-                                            <button className="expand-btn" onClick={() => setExpandedCollege(isCollegeExpanded ? null : college.id)}>
-                                                {isCollegeExpanded ? '▲' : '▼'}
+                                        {isAdmin && (
+                                            <button className="action-icon-btn danger" title="Delete college" onClick={() => { if (window.confirm('Delete ' + college.name + '?')) removeCollege.mutate(college.id); }}>
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
                                             </button>
-                                        </div>
+                                        )}
                                     </div>
 
-                                    {/* Departments under college */}
-                                    {isCollegeExpanded && (
-                                        <div style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-deep)', padding: '12px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                            {collegeDepts.length === 0 ? (
-                                                <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: 0, textAlign: 'center', padding: '8px 0' }}>
-                                                    No departments assigned to this college yet
-                                                </p>
-                                            ) : collegeDepts.map((dept) => {
+                                    {/* Department children (indented, always visible) */}
+                                    {collegeDepts.length > 0 && (
+                                        <div style={{ paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
+                                            {collegeDepts.map((dept) => {
                                                 const members = membersOf(dept.id);
-                                                const isDeptExpanded = expandedDept === dept.id;
+                                                const isExpanded = expandedDept === dept.id;
                                                 return (
-                                                    <div key={dept.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', gap: 8 }}>
+                                                    <div key={dept.id}>
+                                                        <div className="dept-row">
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
-                                                                <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(79,70,229,0.1)', border: '1px solid rgba(79,70,229,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>
-                                                                    🏢
-                                                                </div>
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2" style={{ flexShrink: 0 }}><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
                                                                 <div style={{ minWidth: 0 }}>
                                                                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{dept.name}</div>
-                                                                    {dept.description && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{dept.description}</div>}
+                                                                    {dept.description && <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 1 }}>{dept.description}</div>}
                                                                 </div>
                                                             </div>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                                                                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-accent)', padding: '2px 8px', background: 'rgba(74,127,165,0.12)', borderRadius: 20, whiteSpace: 'nowrap' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                                                                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)', padding: '2px 8px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 20, whiteSpace: 'nowrap' }}>
                                                                     {members.length} member{members.length !== 1 ? 's' : ''}
                                                                 </span>
                                                                 {isAdmin && (
-                                                                    <button className="delete-btn" onClick={() => { if (window.confirm('Delete ' + dept.name + '?')) removeDept.mutate(dept.id); }}>
-                                                                        Delete
+                                                                    <button className="action-icon-btn danger" title="Delete department" onClick={() => { if (window.confirm('Delete ' + dept.name + '?')) removeDept.mutate(dept.id); }}>
+                                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
                                                                     </button>
                                                                 )}
-                                                                <button className="expand-btn" onClick={() => setExpandedDept(isDeptExpanded ? null : dept.id)}>
-                                                                    {isDeptExpanded ? '▲' : '▼'}
+                                                                <button className="expand-btn" title={isExpanded ? 'Hide members' : 'Show members'} onClick={() => setExpandedDept(isExpanded ? null : dept.id)}>
+                                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transition: 'transform var(--duration-fast)', transform: isExpanded ? 'rotate(180deg)' : 'none' }}><polyline points="6 9 12 15 18 9"/></svg>
                                                                 </button>
                                                             </div>
                                                         </div>
-                                                        {isDeptExpanded && (
-                                                            <div style={{ borderTop: '1px solid var(--border)', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8, background: 'var(--bg-deep)' }}>
+                                                        {isExpanded && (
+                                                            <div style={{ paddingLeft: 16, paddingTop: 4, display: 'flex', flexDirection: 'column', gap: 4 }}>
                                                                 {members.length === 0 ? (
-                                                                    <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: 0, textAlign: 'center' }}>No members assigned</p>
-                                                                ) : members.map((u) => (
-                                                                    <MemberRow key={u.id} u={u} />
-                                                                ))}
+                                                                    <p style={{ color: 'var(--text-tertiary)', fontSize: 12, margin: '4px 0', paddingLeft: 4 }}>No members assigned</p>
+                                                                ) : members.map((u) => <MemberRow key={u.id} u={u} />)}
                                                             </div>
                                                         )}
                                                     </div>
@@ -322,93 +327,99 @@ export default function Departments() {
                                             })}
                                         </div>
                                     )}
+                                    {collegeDepts.length === 0 && (
+                                        <p style={{ paddingLeft: 16, margin: '4px 0 0', fontSize: 12, color: 'var(--text-tertiary)' }}>No departments assigned</p>
+                                    )}
                                 </div>
                             );
                         })}
 
                         {/* Unassigned departments */}
                         {unassignedDepts.length > 0 && (
-                            <div className="college-card" style={{ borderColor: 'rgba(245,158,11,0.2)' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 18px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                                        <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>⚠️</div>
-                                        <div>
-                                            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Unassigned Departments</div>
-                                            <div style={{ fontSize: 12, color: '#f59e0b', marginTop: 2 }}>Not linked to any college</div>
-                                        </div>
-                                    </div>
-                                    <button className="expand-btn" onClick={() => setExpandedCollege(expandedCollege === 'unassigned' ? null : 'unassigned')}>
-                                        {expandedCollege === 'unassigned' ? '▲' : '▼'}
-                                    </button>
+                            <div>
+                                <div style={{ padding: '12px 20px', background: 'var(--warning-bg)', borderLeft: '3px solid var(--warning)', borderRadius: 12, marginBottom: 4 }}>
+                                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--warning)' }}>Unassigned Departments</div>
+                                    <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>Not linked to any college</div>
                                 </div>
-                                {expandedCollege === 'unassigned' && (
-                                    <div style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-deep)', padding: '12px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                        {unassignedDepts.map((dept) => (
-                                            <div key={dept.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--bg-card)', borderRadius: 10, border: '1px solid var(--border)' }}>
-                                                <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>{dept.name}</span>
-                                                {isAdmin && (
-                                                    <button className="delete-btn" onClick={() => { if (window.confirm('Delete ' + dept.name + '?')) removeDept.mutate(dept.id); }}>Delete</button>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+                                <div style={{ paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                    {unassignedDepts.map((dept) => (
+                                        <div key={dept.id} className="dept-row">
+                                            <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>{dept.name}</span>
+                                            {isAdmin && (
+                                                <button className="action-icon-btn danger" title="Delete department" onClick={() => { if (window.confirm('Delete ' + dept.name + '?')) removeDept.mutate(dept.id); }}>
+                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </div>
 
                 ) : (
 
-                    /* ── All Departments Flat View ── */
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    /* ── Flat Table View ── */
+                    <div style={{ background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20, overflow: 'hidden', animation: 'fadeUp 0.4s ease both' }}>
                         {filteredDepts.length === 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 64, background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border)', gap: 12 }}>
-                                <div style={{ fontSize: 32, opacity: 0.3 }}>🏢</div>
-                                <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: 13 }}>No departments found</p>
-                                {isAdmin && <button className="dp-primary-btn" onClick={() => setDeptModal(true)}>Create one</button>}
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 48, gap: 12 }}>
+                                <div style={{ opacity: 0.3 }}><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg></div>
+                                <p style={{ color: 'var(--text-tertiary)', margin: 0, fontSize: 13 }}>No departments found</p>
+                                {isAdmin && <button className="dp-primary-btn" onClick={() => setDeptModal(true)}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                    Create one
+                                </button>}
                             </div>
-                        ) : filteredDepts.map((dept, i) => {
-                            const members = membersOf(dept.id);
-                            const isExpanded = expandedDept === dept.id;
-                            return (
-                                <div key={dept.id} className="dept-card" style={{ animationDelay: `${i * 0.06}s` }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 18px', gap: 8 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0, flex: 1 }}>
-                                            <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg, rgba(71,191,255,0.15), rgba(79,70,229,0.15))', border: '1px solid rgba(71,191,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🏢</div>
-                                            <div style={{ minWidth: 0 }}>
-                                                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{dept.name}</div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
-                                                    {dept.collegeName && (
-                                                        <span style={{ fontSize: 10, fontWeight: 700, color: '#47bfff', background: 'rgba(71,191,255,0.1)', padding: '1px 6px', borderRadius: 20 }}>
-                                                            {dept.collegeCode}
+                        ) : (
+                            <div style={{ overflowX: 'auto' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr>
+                                            {['Department', 'College', 'Members', ''].map((h) => (
+                                                <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.06em', borderBottom: '1px solid var(--border-default)', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
+                                                    {h}
+                                                </th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredDepts.map((dept) => {
+                                            const members = membersOf(dept.id);
+                                            return (
+                                                <tr key={dept.id} className="flat-row">
+                                                    <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
+                                                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{dept.name}</div>
+                                                        {dept.description && <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>{dept.description}</div>}
+                                                    </td>
+                                                    <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
+                                                        {dept.collegeName ? (
+                                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                                                                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent-to)', background: 'rgba(71,191,255,0.1)', border: '1px solid rgba(71,191,255,0.2)', padding: '1px 7px', borderRadius: 20 }}>{dept.collegeCode}</span>
+                                                                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{dept.collegeName}</span>
+                                                            </span>
+                                                        ) : (
+                                                            <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>—</span>
+                                                        )}
+                                                    </td>
+                                                    <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
+                                                        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)' }}>
+                                                            {members.length} member{members.length !== 1 ? 's' : ''}
                                                         </span>
-                                                    )}
-                                                    {dept.description && <div style={{ fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{dept.description}</div>}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                                            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-accent)', padding: '3px 9px', background: 'rgba(74,127,165,0.12)', borderRadius: 20, whiteSpace: 'nowrap' }}>
-                                                {members.length} member{members.length !== 1 ? 's' : ''}
-                                            </span>
-                                            {isAdmin && (
-                                                <button className="delete-btn" onClick={() => { if (window.confirm('Delete ' + dept.name + '?')) removeDept.mutate(dept.id); }}>Delete</button>
-                                            )}
-                                            <button className="expand-btn" onClick={() => setExpandedDept(isExpanded ? null : dept.id)}>
-                                                {isExpanded ? '▲' : '▼'}
-                                            </button>
-                                        </div>
-                                    </div>
-                                    {isExpanded && (
-                                        <div style={{ borderTop: '1px solid var(--border)', padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--bg-deep)' }}>
-                                            {members.length === 0 ? (
-                                                <p style={{ color: '#8f98a0', fontSize: 13, margin: 0, textAlign: 'center', padding: '8px 0' }}>No members assigned</p>
-                                            ) : members.map((u) => <MemberRow key={u.id} u={u} />)}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
+                                                    </td>
+                                                    <td style={{ padding: '14px 16px', verticalAlign: 'middle', textAlign: 'right' }}>
+                                                        {isAdmin && (
+                                                            <button className="action-icon-btn danger" title="Delete department" onClick={() => { if (window.confirm('Delete ' + dept.name + '?')) removeDept.mutate(dept.id); }}>
+                                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                                                            </button>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -417,29 +428,29 @@ export default function Departments() {
             {deptModal && (
                 <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setDeptModal(false)}>
                     <div className="modal-box">
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', borderBottom: '1px solid var(--border)' }}>
-                            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', fontFamily: "'Inter', sans-serif" }}>New Department</h2>
-                            <button className="modal-close-btn" onClick={() => { setDeptModal(false); setDeptForm(EMPTY_DEPT); }}>✕</button>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', borderBottom: '1px solid var(--border-subtle)' }}>
+                            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>New Department</h2>
+                            <button className="modal-close-btn" onClick={() => { setDeptModal(false); setDeptForm(EMPTY_DEPT); }}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
                         </div>
-                        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14, fontFamily: "'Inter', sans-serif" }}>
+                        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
                             <Field label="College">
-                                <select className="dp-select" value={deptForm.collegeId} onChange={setD('collegeId')}>
+                                <select className="dp-input" value={deptForm.collegeId} onChange={setD('collegeId')}>
                                     <option value="">— No College —</option>
-                                    {colleges.map(c => (
-                                        <option key={c.id} value={c.id}>{c.name} ({c.code})</option>
-                                    ))}
+                                    {colleges.map(c => <option key={c.id} value={c.id}>{c.name} ({c.code})</option>)}
                                 </select>
                             </Field>
                             <Field label="Department Name *">
                                 <input className="dp-input" value={deptForm.name} onChange={setD('name')} placeholder="e.g. Registrar, Dean's Office" />
                             </Field>
                             <Field label="Description">
-                                <textarea className="dp-input" style={{ height: 70, resize: 'vertical' }} value={deptForm.description} onChange={setD('description')} placeholder="Optional description..." />
+                                <textarea className="dp-input" style={{ height: 70, resize: 'vertical' }} value={deptForm.description} onChange={setD('description')} placeholder="Optional description…" />
                             </Field>
-                            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+                            <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
                                 <button className="dp-ghost-btn" onClick={() => { setDeptModal(false); setDeptForm(EMPTY_DEPT); }}>Cancel</button>
-                                <button className="dp-primary-btn" onClick={() => { if (deptForm.name.trim()) createDeptMut.mutate(deptForm); }} disabled={createDeptMut.isPending}>
-                                    {createDeptMut.isPending ? 'Creating...' : 'Create'}
+                                <button className="modal-submit-btn" style={{ flex: 1 }} onClick={() => { if (deptForm.name.trim()) createDeptMut.mutate(deptForm); }} disabled={createDeptMut.isPending}>
+                                    {createDeptMut.isPending ? 'Creating…' : 'Create Department'}
                                 </button>
                             </div>
                         </div>
@@ -451,11 +462,13 @@ export default function Departments() {
             {collegeModal && (
                 <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setCollegeModal(false)}>
                     <div className="modal-box">
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', borderBottom: '1px solid var(--border)' }}>
-                            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', fontFamily: "'Inter', sans-serif" }}>New College</h2>
-                            <button className="modal-close-btn" onClick={() => { setCollegeModal(false); setCollegeForm(EMPTY_COLLEGE); }}>✕</button>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', borderBottom: '1px solid var(--border-subtle)' }}>
+                            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>New College</h2>
+                            <button className="modal-close-btn" onClick={() => { setCollegeModal(false); setCollegeForm(EMPTY_COLLEGE); }}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
                         </div>
-                        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14, fontFamily: "'Inter', sans-serif" }}>
+                        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
                             <Field label="College Name *">
                                 <input className="dp-input" value={collegeForm.name} onChange={setC('name')} placeholder="e.g. College of Computer Studies" />
                             </Field>
@@ -463,12 +476,12 @@ export default function Departments() {
                                 <input className="dp-input" value={collegeForm.code} onChange={setC('code')} placeholder="e.g. CCS" maxLength={10} />
                             </Field>
                             <Field label="Description">
-                                <textarea className="dp-input" style={{ height: 70, resize: 'vertical' }} value={collegeForm.description} onChange={setC('description')} placeholder="Optional description..." />
+                                <textarea className="dp-input" style={{ height: 70, resize: 'vertical' }} value={collegeForm.description} onChange={setC('description')} placeholder="Optional description…" />
                             </Field>
-                            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+                            <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
                                 <button className="dp-ghost-btn" onClick={() => { setCollegeModal(false); setCollegeForm(EMPTY_COLLEGE); }}>Cancel</button>
-                                <button className="dp-primary-btn" onClick={() => { if (collegeForm.name.trim() && collegeForm.code.trim()) createCollegeMut.mutate(collegeForm); }} disabled={createCollegeMut.isPending}>
-                                    {createCollegeMut.isPending ? 'Creating...' : 'Create'}
+                                <button className="modal-submit-btn" style={{ flex: 1 }} onClick={() => { if (collegeForm.name.trim() && collegeForm.code.trim()) createCollegeMut.mutate(collegeForm); }} disabled={createCollegeMut.isPending}>
+                                    {createCollegeMut.isPending ? 'Creating…' : 'Create College'}
                                 </button>
                             </div>
                         </div>
@@ -481,17 +494,17 @@ export default function Departments() {
 
 function MemberRow({ u }) {
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#47bfff,#4F46E5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 8 }}>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
                 {(u.firstName?.[0] || u.fullName?.[0] || '?').toUpperCase()}
             </div>
             <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {u.firstName && u.lastName ? u.firstName + ' ' + u.lastName : u.fullName || u.email}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
             </div>
-            <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', background: 'rgba(79,70,229,0.15)', border: '1px solid rgba(79,70,229,0.2)', borderRadius: 20, color: '#818cf8', flexShrink: 0 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', background: 'rgba(79,70,229,0.12)', border: '1px solid rgba(79,70,229,0.2)', borderRadius: 20, color: '#818cf8', flexShrink: 0 }}>
                 {u.role || 'User'}
             </span>
         </div>
@@ -501,7 +514,7 @@ function MemberRow({ u }) {
 function Field({ label, children }) {
     return (
         <div>
-            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-accent)', letterSpacing: '0.05em', margin: '0 0 4px', display: 'block', fontFamily: "'Inter', sans-serif" }}>{label}</label>
+            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.05em', margin: '0 0 4px', display: 'block', fontFamily: "'Inter', sans-serif" }}>{label}</label>
             <div style={{ marginTop: 4 }}>{children}</div>
         </div>
     );

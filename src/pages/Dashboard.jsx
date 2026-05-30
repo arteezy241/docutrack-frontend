@@ -1,345 +1,552 @@
-import { useEffect, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import { AppLayout } from '../components/Sidebar';
 import useAuthStore from '../store/authStore';
 import useWindowWidth from '../hooks/useWindowWidth';
-// burat?
-const statusMap = {
-    0: { label: 'Draft', color: '#8f98a0', bg: 'rgba(143,152,160,0.12)' },
-    1: { label: 'In Review', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
-    2: { label: 'Approved', color: '#4ade80', bg: 'rgba(74,222,128,0.12)' },
-    3: { label: 'Rejected', color: '#f87171', bg: 'rgba(248,113,113,0.12)' },
-    4: { label: 'Archived', color: '#818cf8', bg: 'rgba(129,140,248,0.12)' },
-};
 
-const statConfig = [
-    { label: 'Total Documents', key: 'total', color: '#47bfff', glow: 'rgba(71,191,255,0.15)', icon: <DocIcon />, filter: 'All' },
-    { label: 'Under Review', key: 'review', color: '#f59e0b', glow: 'rgba(245,158,11,0.15)', icon: <ClockIcon />, filter: 'InReview' },
-    { label: 'Approved', key: 'approved', color: '#4ade80', glow: 'rgba(74,222,128,0.15)', icon: <CheckIcon />, filter: 'Approved' },
-    { label: 'Rejected', key: 'rejected', color: '#f87171', glow: 'rgba(248,113,113,0.15)', icon: <XIcon />, filter: 'Rejected' },
-];
-
-export default function Dashboard() {
-    const navigate = useNavigate();
-    const { user } = useAuthStore();
-    const width = useWindowWidth();
-    const isMobile = width < 768;
-    const isTablet = width < 1024;
-
-    const [docs, setDocs] = useState([]);
-    const [routingEvents, setRoutingEvents] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState('');
-
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                const [docsRes] = await Promise.all([
-                    client.get('/documents'),
-                ]);
-                setDocs(docsRes.data);
-
-                // Fetch routing events for each document to find pending approvals
-                const pendingRes = await client.get('/routing/pending');
-                setRoutingEvents(pendingRes.data);
-
-                
-            } catch (error) { console.error(error); }
-            finally { setLoading(false); }
-        };
-        loadData();
-    }, []);
-
-    const pendingApprovals = routingEvents;
-
-    const now = new Date();
-    const overdueDocs = docs.filter(d => {
-        if (!d.dueDate) return false;
-        const due = new Date(d.dueDate);
-        const isOverdue = due < now;
-        const notDone = d.status !== 2 && d.status !== 4;
-        return isOverdue && notDone;
-    });
-
-    const statValues = {
-        total: docs.length,
-        review: docs.filter(d => d.status === 1).length,
-        approved: docs.filter(d => d.status === 2).length,
-        rejected: docs.filter(d => d.status === 3).length,
-    };
-
-    const filtered = docs.filter(d =>
-        !search || d.title?.toLowerCase().includes(search.toLowerCase())
-    );
-
-    const greeting = () => {
-        const h = new Date().getHours();
-        if (h < 12) return 'Good morning';
-        if (h < 18) return 'Good afternoon';
-        return 'Good evening';
-    };
-
-    const displayName = user?.fullName?.split(' ')[0] || user?.username || 'there';
-
-    return (
-        <AppLayout>
-            <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-                @keyframes dtSpin { to { transform: rotate(360deg); } }
-                @keyframes fadeUp {
-                    from { opacity: 0; transform: translateY(12px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                .stat-card {
-                    background: var(--bg-card); border: 1px solid var(--border);
-                    border-radius: 16px; padding: 20px;
-                    display: flex; align-items: center; justify-content: space-between;
-                    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-                    animation: fadeUp 0.4s ease both; cursor: pointer;
-                }
-                .stat-card:hover { transform: translateY(-2px); border-color: var(--border-input); }
-                .db-search {
-                    padding: 9px 14px 9px 36px; background: var(--bg-input);
-                    border: 1px solid var(--border); border-radius: 10px;
-                    color: var(--text-secondary); font-size: 13px; outline: none;
-                    font-family: 'Inter', sans-serif; transition: border-color 0.2s, background 0.2s;
-                    width: 100%;
-                }
-                .db-search:focus { border-color: rgba(71,191,255,0.4); background: var(--bg-hover); }
-                .db-search::placeholder { color: var(--text-accent); }
-                .db-primary-btn {
-                    padding: 9px 18px; background: linear-gradient(135deg, #47bfff, #4F46E5);
-                    border: none; border-radius: 10px; color: #fff;
-                    font-size: 13px; font-weight: 600; cursor: pointer;
-                    font-family: 'Inter', sans-serif; transition: opacity 0.2s, transform 0.2s;
-                    white-space: nowrap; box-shadow: 0 4px 12px rgba(79,70,229,0.3);
-                }
-                .db-primary-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-                .view-all-btn {
-                    background: none; border: none; color: #47bfff; font-size: 12px;
-                    cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 500;
-                    padding: 4px 8px; border-radius: 6px; transition: background 0.2s;
-                }
-                .view-all-btn:hover { background: rgba(71,191,255,0.1); }
-                .doc-row { border-bottom: 1px solid var(--border); transition: background 0.15s; cursor: pointer; }
-                .doc-row:hover { background: var(--bg-hover); }
-                .doc-row:last-child { border-bottom: none; }
-                .alert-row { border-bottom: 1px solid var(--border); transition: background 0.15s; }
-                .alert-row:hover { background: var(--bg-hover); }
-                .alert-row:last-child { border-bottom: none; }
-            `}</style>
-
-            <div style={{ padding: isMobile ? '20px 16px' : '28px 28px', color: 'var(--text-secondary)', fontFamily: "'Inter', sans-serif", maxWidth: 1200 }}>
-
-                {/* Header */}
-                <div style={{ marginBottom: 28, animation: 'fadeUp 0.3s ease both' }}>
-                    <p style={{ margin: '0 0 4px', fontSize: 13, color: 'var(--text-accent)', fontWeight: 500 }}>
-                        {greeting()}, {displayName}
-                    </p>
-                    <h1 style={{ margin: 0, fontSize: isMobile ? 22 : 26, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
-                        Document Dashboard
-                    </h1>
-                    <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
-                        Manage and track all your documents
-                    </p>
-                </div>
-
-                {/* Topbar actions */}
-                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 12, marginBottom: 24, animation: 'fadeUp 0.35s ease both' }}>
-                    <div style={{ position: 'relative', flex: 1, maxWidth: isMobile ? '100%' : 320 }}>
-                        <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-accent)' }}>
-                            <SearchIcon />
-                        </span>
-                        <input className="db-search" placeholder="Search documents..." value={search} onChange={e => setSearch(e.target.value)} />
-                    </div>
-                    <button className="db-primary-btn" onClick={() => navigate('/documents')}>+ New Document</button>
-                </div>
-
-                {/* Stats grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : isTablet ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
-                    {statConfig.map(({ label, key, color, glow, icon, filter }, i) => (
-                        <div key={key} className="stat-card" style={{ animationDelay: `${i * 0.07}s`, boxShadow: `0 4px 20px ${glow}` }} onClick={() => navigate('/documents', { state: { filter } })}>
-                            <div>
-                                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.05em', marginBottom: 8, textTransform: 'uppercase' }}>{label}</div>
-                                <div style={{ fontSize: 32, fontWeight: 800, color, letterSpacing: '-0.02em', lineHeight: 1 }}>{loading ? '—' : statValues[key]}</div>
-                            </div>
-                            <div style={{ width: 44, height: 44, borderRadius: 12, background: glow, border: `1px solid ${color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', color, flexShrink: 0 }}>
-                                {icon}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Pending Approvals + Overdue — side by side on desktop */}
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16, marginBottom: 24, animation: 'fadeUp 0.45s ease both' }}>
-
-                    {/* Pending Approvals */}
-                    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
-                        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Pending Approvals</span>
-                                {!loading && pendingApprovals.length > 0 && (
-                                    <span style={{ fontSize: 11, fontWeight: 700, background: 'rgba(245,158,11,0.15)', color: '#f59e0b', padding: '2px 8px', borderRadius: 20 }}>
-                                        {pendingApprovals.length}
-                                    </span>
-                                )}
-                            </div>
-                            <button className="view-all-btn" onClick={() => navigate('/routing')}>View all →</button>
-                        </div>
-                        {loading ? (
-                            <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><Spinner /></div>
-                        ) : pendingApprovals.length === 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 32, gap: 8 }}>
-                                <div style={{ fontSize: 24, opacity: 0.3 }}>✅</div>
-                                <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: 13 }}>No pending approvals</p>
-                            </div>
-                        ) : (
-                            <div>
-                                {pendingApprovals.slice(0, 5).map((ev) => (
-                                    <div key={ev.id} className="alert-row" style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}
-                                        onClick={() => navigate('/routing')}>
-                                        <div style={{ minWidth: 0 }}>
-                                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                {ev.docTitle || 'Untitled'}
-                                            </div>
-                                            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                                                Awaiting your approval
-                                            </div>
-                                        </div>
-                                        <span style={{ fontSize: 11, fontWeight: 600, background: 'rgba(245,158,11,0.12)', color: '#f59e0b', padding: '3px 9px', borderRadius: 20, flexShrink: 0 }}>
-                                            Pending
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Overdue Documents */}
-                    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
-                        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Overdue Documents</span>
-                                {!loading && overdueDocs.length > 0 && (
-                                    <span style={{ fontSize: 11, fontWeight: 700, background: 'rgba(248,113,113,0.15)', color: '#f87171', padding: '2px 8px', borderRadius: 20 }}>
-                                        {overdueDocs.length}
-                                    </span>
-                                )}
-                            </div>
-                            <button className="view-all-btn" onClick={() => navigate('/documents')}>View all →</button>
-                        </div>
-                        {loading ? (
-                            <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><Spinner /></div>
-                        ) : overdueDocs.length === 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 32, gap: 8 }}>
-                                <div style={{ fontSize: 24, opacity: 0.3 }}>🎉</div>
-                                <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: 13 }}>No overdue documents</p>
-                            </div>
-                        ) : (
-                            <div>
-                                {overdueDocs.slice(0, 5).map((doc) => {
-                                    const daysOverdue = Math.abs(Math.ceil((new Date(doc.dueDate) - now) / (1000 * 60 * 60 * 24)));
-                                    return (
-                                        <div key={doc.id} className="alert-row" style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}
-                                            onClick={() => navigate('/documents')}>
-                                            <div style={{ minWidth: 0 }}>
-                                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                    {doc.title || 'Untitled'}
-                                                </div>
-                                                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                                                    Due {new Date(doc.dueDate).toLocaleDateString()}
-                                                </div>
-                                            </div>
-                                            <span style={{ fontSize: 11, fontWeight: 600, background: 'rgba(248,113,113,0.12)', color: '#f87171', padding: '3px 9px', borderRadius: 20, flexShrink: 0, whiteSpace: 'nowrap' }}>
-                                                {daysOverdue}d overdue
-                                            </span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Recent Documents table */}
-                <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', animation: 'fadeUp 0.5s ease both', animationDelay: '0.2s' }}>
-                    <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div>
-                            <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 15 }}>Recent Documents</span>
-                            {!loading && <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--text-accent)', background: 'rgba(74,127,165,0.12)', padding: '2px 8px', borderRadius: 20, fontWeight: 600 }}>{filtered.length}</span>}
-                        </div>
-                        <button className="view-all-btn" onClick={() => navigate('/documents')}>View all →</button>
-                    </div>
-
-                    {loading ? (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48 }}><Spinner /></div>
-                    ) : filtered.length === 0 ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 48, gap: 12 }}>
-                            <div style={{ fontSize: 32, opacity: 0.3 }}>📄</div>
-                            <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: 13 }}>
-                                {search ? 'No documents match your search.' : 'No documents yet.'}
-                            </p>
-                            {!search && <button className="db-primary-btn" onClick={() => navigate('/documents')}>Create your first document</button>}
-                        </div>
-                    ) : (
-                        <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                <thead>
-                                    <tr style={{ background: 'var(--table-head)' }}>
-                                        {['ID', 'Title', 'Status', 'Owner', 'Due Date', 'Created'].map(h => (
-                                            <th key={h} style={{ padding: '11px 20px', textAlign: 'left', color: 'var(--text-accent)', fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
-                                                {h}
-                                            </th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filtered.slice(0, 10).map((doc, i) => {
-                                        const status = statusMap[doc.status] || statusMap[0];
-                                        const isDue = doc.dueDate && new Date(doc.dueDate) < now && doc.status !== 2 && doc.status !== 4;
-                                        return (
-                                            <tr key={doc.id} className="doc-row" onClick={() => navigate('/documents')}>
-                                                <td style={{ padding: '13px 20px', color: 'var(--text-accent)', fontSize: 11, fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
-                                                    DOC-{String(i + 1).padStart(3, '0')}
-                                                </td>
-                                                <td style={{ padding: '13px 20px', fontSize: 13, color: 'var(--text-primary)', fontWeight: 600, whiteSpace: 'nowrap', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                    {doc.title || '(No title)'}
-                                                </td>
-                                                <td style={{ padding: '13px 20px', whiteSpace: 'nowrap' }}>
-                                                    <span style={{ background: status.bg, color: status.color, padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>
-                                                        {status.label}
-                                                    </span>
-                                                </td>
-                                                <td style={{ padding: '13px 20px', fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                                                    {doc.owner?.fullName || '—'}
-                                                </td>
-                                                <td style={{ padding: '13px 20px', whiteSpace: 'nowrap' }}>
-                                                    {doc.dueDate ? (
-                                                        <span style={{ fontSize: 11, fontWeight: 600, background: isDue ? 'rgba(248,113,113,0.12)' : 'rgba(74,222,128,0.12)', color: isDue ? '#f87171' : '#4ade80', padding: '3px 9px', borderRadius: 20 }}>
-                                                            {isDue ? '⚠ ' : ''}{new Date(doc.dueDate).toLocaleDateString()}
-                                                        </span>
-                                                    ) : <span style={{ color: 'var(--text-accent)', fontSize: 12 }}>—</span>}
-                                                </td>
-                                                <td style={{ padding: '13px 20px', fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                                                    {doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : '—'}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </AppLayout>
-    );
+const CSS = `
+/* ── Liquid-glass shared base — login-card level transparency ── */
+.lg-base {
+  position: relative;
+  isolation: isolate;
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.40), 0 1px 0 rgba(255,255,255,0.08) inset;
 }
 
-function Spinner() { return <div style={{ width: 28, height: 28, borderRadius: '50%', border: '3px solid rgba(71,191,255,0.15)', borderTopColor: '#47bfff', animation: 'dtSpin 0.8s linear infinite' }} />; }
-function DocIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>; }
-function ClockIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>; }
-function CheckIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>; }
-function XIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>; }
-function SearchIcon() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>; }
+.stat-card {
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  animation: fadeUp 0.4s var(--ease-spring) both;
+  transition: transform var(--duration-base) var(--ease-out), box-shadow var(--duration-base), border-color var(--duration-base);
+}
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 16px 48px rgba(0,0,0,0.55),
+    0 1px 0 rgba(255,255,255,0.28) inset,
+    0 -1px 0 rgba(0,0,0,0.18) inset;
+  border-color: rgba(255,255,255,0.28);
+}
+.stat-card > * { position: relative; z-index: 1; }
+.stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 8px;
+}
+.stat-value {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.stat-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.15);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.18) inset;
+}
+.panel {
+  border-radius: 16px;
+  overflow: hidden;
+}
+.panel > * { position: relative; z-index: 1; }
+.panel-head {
+  padding: 11px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.09);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: rgba(255,255,255,0.04);
+}
+.panel-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+.badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--bg-elevated);
+  color: var(--text-tertiary);
+}
+.badge-warning { background: var(--warning-bg); color: var(--warning); }
+.db-link-btn {
+  background: none;
+  border: none;
+  color: var(--accent-to);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: 'Inter', system-ui, sans-serif;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 140ms;
+  white-space: nowrap;
+}
+.db-link-btn:hover { background: rgba(71,191,255,0.08); }
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  gap: 6px;
+  text-align: center;
+}
+.empty-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  margin-bottom: 6px;
+}
+.empty-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+.empty-sub {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin: 0;
+}
+.pending-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  transition: background 120ms;
+}
+.pending-row:last-child { border-bottom: none; }
+.pending-row:hover { background: rgba(255,255,255,0.05); }
+.pending-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 3px;
+}
+.pending-meta {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+.action-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 11px;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  font-family: 'Inter', system-ui, sans-serif;
+  transition: opacity 140ms, transform 140ms;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+.action-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; }
+.action-btn:hover:not(:disabled) { opacity: 0.82; transform: translateY(-1px); }
+.action-btn.approve { background: var(--success-bg); color: var(--success); }
+.action-btn.reject  { background: var(--danger-bg);  color: var(--danger); }
+.doc-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.doc-table col.col-title   { width: 40%; }
+.doc-table col.col-status  { width: 20%; }
+.doc-table col.col-owner   { width: 22%; }
+.doc-table col.col-updated { width: 18%; }
+.doc-table thead th {
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.doc-row { cursor: pointer; transition: background 120ms; }
+.doc-row:hover { background: rgba(255,255,255,0.05); }
+.doc-row td {
+  padding: 9px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  font-size: 13.5px;
+  vertical-align: middle;
+  overflow: hidden;
+}
+.doc-row:last-child td { border-bottom: none; }
+.doc-title-cell {
+  color: var(--text-primary);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.doc-dim-cell {
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.status-pill {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.db-btn-primary {
+  padding: 9px 18px;
+  background: var(--accent-gradient);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Inter', system-ui, sans-serif;
+  box-shadow: var(--shadow-accent);
+  transition: opacity 200ms, transform 200ms;
+  margin-top: 8px;
+}
+.db-btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+.sk {
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--bg-elevated) 25%, var(--bg-card-hover) 50%, var(--bg-elevated) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+`;
+
+const STATUS = {
+  0: { label: 'Draft',     color: 'var(--info)',          bg: 'var(--info-bg)' },
+  1: { label: 'In Review', color: 'var(--warning)',       bg: 'var(--warning-bg)' },
+  2: { label: 'Approved',  color: 'var(--success)',       bg: 'var(--success-bg)' },
+  3: { label: 'Rejected',  color: 'var(--danger)',        bg: 'var(--danger-bg)' },
+  4: { label: 'Archived',  color: 'var(--text-tertiary)', bg: 'var(--border-subtle)' },
+};
+
+function Sk({ h = 14, w, r = 5, style }) {
+  return <div className="sk" style={{ height: h, width: w, borderRadius: r, flexShrink: w ? 0 : undefined, ...style }} />;
+}
+
+export default function Dashboard() {
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const width = useWindowWidth();
+  const isMobile = width < 768;
+  const queryClient = useQueryClient();
+
+  const {
+    data: docs = [],
+    isLoading: docsLoading,
+    isError: docsError,
+  } = useQuery({
+    queryKey: ['docs'],
+    queryFn: () => client.get('/documents').then(r => r.data),
+  });
+
+  const {
+    data: pending = [],
+    isLoading: pendingLoading,
+    isError: pendingError,
+  } = useQuery({
+    queryKey: ['routing-pending'],
+    queryFn: () => client.get('/routing/pending').then(r => r.data),
+  });
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['routing-pending'] });
+    queryClient.invalidateQueries({ queryKey: ['docs'] });
+  };
+
+  const approveMutation = useMutation({
+    mutationFn: (id) => client.post('/routing/approve', { routingEventId: id }),
+    onSuccess: invalidate,
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (id) => client.post('/routing/reject', { routingEventId: id }),
+    onSuccess: invalidate,
+  });
+
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const overdueDocs = docs.filter(d =>
+    d.dueDate && new Date(d.dueDate) < now && d.status !== 2 && d.status !== 4
+  );
+  const approvedThisMonth = docs.filter(d => {
+    if (d.status !== 2) return false;
+    return new Date(d.updatedAt || d.createdAt) >= startOfMonth;
+  });
+  const recentDocs = [...docs]
+    .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
+    .slice(0, 10);
+
+  const h = now.getHours();
+  const greeting = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  const displayName = user?.fullName?.split(' ')[0] || user?.username || 'there';
+
+  const stats = [
+    { label: 'Total Documents',    value: docs.length,              color: 'var(--info)',    bg: 'var(--info-bg)',    glow: '96,165,250',   icon: <DocIcon />,   to: '/documents' },
+    { label: 'Pending Approvals',  value: pending.length,           color: 'var(--warning)', bg: 'var(--warning-bg)', glow: '251,191,36',   icon: <ClockIcon />, to: '/routing' },
+    { label: 'Overdue',            value: overdueDocs.length,       color: 'var(--danger)',  bg: 'var(--danger-bg)',  glow: '248,113,113',  icon: <AlertIcon />, to: '/documents' },
+    { label: 'Approved This Month',value: approvedThisMonth.length, color: 'var(--success)', bg: 'var(--success-bg)', glow: '52,211,153',   icon: <CheckIcon />, to: '/documents' },
+  ];
+
+  const loading = docsLoading || pendingLoading;
+
+  return (
+    <AppLayout>
+      <style>{CSS}</style>
+
+      <div style={{ padding: isMobile ? '16px 12px' : '20px 20px', fontFamily: "'Inter', system-ui, sans-serif" }}>
+
+        {/* Header */}
+        <div style={{ marginBottom: 20, animation: 'fadeUp 0.4s var(--ease-spring) both' }}>
+          <h1 style={{ margin: 0, fontSize: isMobile ? 22 : 26, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+            {greeting}, {displayName}
+          </h1>
+          <p style={{ margin: '5px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>
+            Here's what's happening today.
+          </p>
+        </div>
+
+        {/* Error banner */}
+        {(docsError || pendingError) && (
+          <div style={{ background: 'var(--danger-bg)', border: '1px solid rgba(248,113,113,0.22)', color: 'var(--danger)', padding: '10px 16px', borderRadius: 'var(--radius-md)', fontSize: 13, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Could not load some data. Please refresh the page.
+          </div>
+        )}
+
+        {/* Stats row */}
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: 12, marginBottom: 14 }}>
+          {stats.map((s, i) => (
+            <div key={s.label} className="stat-card lg-base"
+              style={{
+                animationDelay: `${i * 0.05}s`,
+                boxShadow: `0 8px 32px rgba(0,0,0,0.45), 0 0 20px 2px rgba(${s.glow},0.22), 0 1px 0 rgba(255,255,255,0.22) inset, 0 -1px 0 rgba(0,0,0,0.18) inset`,
+                borderColor: `rgba(${s.glow},0.30)`,
+              }}
+              onClick={() => navigate(s.to)}
+              onMouseEnter={e => {
+                e.currentTarget.style.boxShadow = `0 16px 48px rgba(0,0,0,0.55), 0 0 40px 8px rgba(${s.glow},0.60), 0 0 80px 16px rgba(${s.glow},0.28), 0 1px 0 rgba(255,255,255,0.28) inset`;
+                e.currentTarget.style.borderColor = `rgba(${s.glow},0.65)`;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.boxShadow = `0 8px 32px rgba(0,0,0,0.45), 0 0 20px 2px rgba(${s.glow},0.22), 0 1px 0 rgba(255,255,255,0.22) inset, 0 -1px 0 rgba(0,0,0,0.18) inset`;
+                e.currentTarget.style.borderColor = `rgba(${s.glow},0.30)`;
+              }}
+            >
+              {loading ? (
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <Sk h={11} w="70%" />
+                  <Sk h={28} w="45%" r={6} />
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <div className="stat-label">{s.label}</div>
+                    <div className="stat-value" style={{ color: s.color }}>{s.value}</div>
+                  </div>
+                  <div className="stat-icon" style={{ background: s.bg, color: s.color }}>{s.icon}</div>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Body grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 3fr', gap: 12, alignItems: 'start' }}>
+
+          {/* Pending Approvals */}
+          <div className="panel lg-base" style={{ animation: 'fadeUp 0.4s var(--ease-spring) 0.15s both' }}>
+            <div className="panel-head">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className="panel-title">Pending Approvals</span>
+                {!pendingLoading && pending.length > 0 && (
+                  <span className="badge badge-warning">{pending.length}</span>
+                )}
+              </div>
+              <button className="db-link-btn" onClick={() => navigate('/routing')}>View all</button>
+            </div>
+
+            {pendingLoading ? (
+              <div style={{ padding: '9px 16px', display: 'flex', flexDirection: 'column', gap: 11 }}>
+                {[0, 1, 2].map(i => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <Sk h={13} style={{ marginBottom: 6 }} />
+                      <Sk h={11} w="55%" />
+                    </div>
+                    <Sk h={28} w={62} r={20} />
+                    <Sk h={28} w={54} r={20} />
+                  </div>
+                ))}
+              </div>
+            ) : pending.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon" style={{ color: 'var(--success)', background: 'var(--success-bg)' }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </div>
+                <p className="empty-title">No pending approvals</p>
+                <p className="empty-sub">You're all caught up!</p>
+              </div>
+            ) : (
+              pending.slice(0, 6).map(ev => {
+                const approving = approveMutation.isPending && approveMutation.variables === ev.id;
+                const rejecting  = rejectMutation.isPending  && rejectMutation.variables  === ev.id;
+                const busy = approving || rejecting;
+                return (
+                  <div key={ev.id} className="pending-row">
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="pending-title">{ev.docTitle || ev.documentTitle || 'Untitled'}</div>
+                      <div className="pending-meta">
+                        From {ev.fromUserName || ev.fromUser?.fullName || 'Unknown'}
+                        {ev.timestamp && <> · {new Date(ev.timestamp).toLocaleDateString()}</>}
+                      </div>
+                    </div>
+                    <button
+                      className="action-btn approve"
+                      disabled={busy}
+                      onClick={() => approveMutation.mutate(ev.id)}
+                    >
+                      {approving ? '…' : 'Approve'}
+                    </button>
+                    <button
+                      className="action-btn reject"
+                      disabled={busy}
+                      onClick={() => rejectMutation.mutate(ev.id)}
+                    >
+                      {rejecting ? '…' : 'Reject'}
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Recent Documents */}
+          <div className="panel lg-base" style={{ animation: 'fadeUp 0.4s var(--ease-spring) 0.2s both' }}>
+            <div className="panel-head">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className="panel-title">Recent Documents</span>
+                {!docsLoading && <span className="badge">{docs.length}</span>}
+              </div>
+              <button className="db-link-btn" onClick={() => navigate('/documents')}>View all</button>
+            </div>
+
+            {docsLoading ? (
+              <div>
+                {[0, 1, 2, 3, 4].map(i => (
+                  <div key={i} style={{ padding: '9px 14px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <Sk h={13} style={{ flex: 2 }} />
+                    <Sk h={22} w={76} r={20} />
+                    <Sk h={13} w={88} />
+                    <Sk h={13} w={72} />
+                  </div>
+                ))}
+              </div>
+            ) : docs.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                  </svg>
+                </div>
+                <p className="empty-title">No documents yet</p>
+                <button className="db-btn-primary" onClick={() => navigate('/documents')}>Create your first document</button>
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table className="doc-table">
+                  <colgroup>
+                    <col className="col-title" />
+                    <col className="col-status" />
+                    <col className="col-owner" />
+                    <col className="col-updated" />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>Title</th>
+                      <th>Status</th>
+                      <th>Owner</th>
+                      <th>Updated</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentDocs.map(doc => {
+                      const s = STATUS[doc.status] ?? STATUS[0];
+                      return (
+                        <tr key={doc.id} className="doc-row" onClick={() => navigate('/documents')}>
+                          <td className="doc-title-cell">{doc.title || '(No title)'}</td>
+                          <td>
+                            <span className="status-pill" style={{ color: s.color, background: s.bg }}>{s.label}</span>
+                          </td>
+                          <td className="doc-dim-cell">{doc.owner?.fullName || doc.ownerName || '—'}</td>
+                          <td className="doc-dim-cell">
+                            {(doc.updatedAt || doc.createdAt)
+                              ? new Date(doc.updatedAt || doc.createdAt).toLocaleDateString()
+                              : '—'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+        </div>
+      </div>
+    </AppLayout>
+  );
+}
+
+function DocIcon() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>;
+}
+function ClockIcon() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+}
+function AlertIcon() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
+}
+function CheckIcon() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
+}
