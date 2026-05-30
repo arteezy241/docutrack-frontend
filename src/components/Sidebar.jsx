@@ -493,7 +493,7 @@ export function AppLayout({ children }) {
           margin: '0 auto',
           width: '100%',
           boxSizing: 'border-box',
-          padding: '32px 24px',
+          padding: isMobile ? '16px 0' : '32px 24px',
         }}>
           {children}
         </div>
