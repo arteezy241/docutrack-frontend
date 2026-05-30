@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import client, { getDeviceName } from '../api/client';
 import useAuthStore from '../store/authStore';
 import { GoogleLogin } from '@react-oauth/google';
+import useWindowWidth from '../hooks/useWindowWidth';
 import { registerPush } from '../api/push';
 
 const CSS = `
@@ -345,9 +346,14 @@ const CSS = `
   display: flex; justify-content: center; margin-bottom: 10px;
   width: 100%; overflow: hidden;
 }
-.google-wrap > div, .google-wrap iframe, .google-wrap > div > div {
-  max-width: 100% !important;
+.google-wrap > div {
   width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+}
+.google-wrap iframe {
+  width: 100% !important;
+  max-width: 100% !important;
 }
 .spinner-muted {
   width: 15px; height: 15px;
@@ -476,6 +482,8 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
+  const windowWidth = useWindowWidth();
+  const googleBtnWidth = Math.min(356, windowWidth - 80);
   // null | 'credentials' | 'google' | 'qr'
   const [authLoading, setAuthLoading] = useState(null);
 
@@ -717,6 +725,7 @@ export default function Login() {
                   theme="filled_blue"
                   shape="rectangular"
                   text="signin_with_google"
+                  width={googleBtnWidth}
                 />
               </div>
             )}
