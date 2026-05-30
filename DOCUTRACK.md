@@ -1,5 +1,5 @@
 # DocuTrack Web — CLAUDE.md
-Last updated: May 2026 (glassmorphism redesign, font improvements)
+Last updated: May 2026 (glassmorphism redesign, font improvements, mobile fixes, custom Google button)
 
 ## Project
 React + Vite → mheku.fyi (Vercel, auto-deploys on push to master)
@@ -48,11 +48,15 @@ Sub-components defined inline: OtpBoxes (6 individual digit inputs, auto-advance
 All styles in a CSS const string injected via <style> — uses only CSS variables from theme.css (no hardcoded colors except particle canvas).
 Forgot password: 3-step inline state machine (email → OTP → newpass → done) with animated step-dot pill indicator. No separate page/route.
 
-**Auth loading state:** Single `authLoading` state (null | 'credentials' | 'google' | 'qr'). When any method is active: other auth buttons are disabled at opacity 0.5, active button shows spinner + loading label. Guards `if (authLoading !== null) return` before every auth action to prevent double-submits. Google button replaced by a `btn-glass` loading button while `authLoading === 'google'`; google-wrap uses `pointerEvents: none` to block the iframe when a different method is active.
+**Auth loading state:** Single `authLoading` state (null | 'credentials' | 'google' | 'qr'). When any method is active: other auth buttons are disabled at opacity 0.5, active button shows spinner + loading label. Guards `if (authLoading !== null) return` before every auth action to prevent double-submits.
+
+**Google button (custom glass):** Rendered as a stacked overlay — a `div.btn-google` (glass button, `pointer-events:none`) sits on top of a real `<GoogleLogin>` component at `opacity:0.001` (not 0 — fully transparent blocks pointer events on cross-origin iframes in production). The `<GoogleLogin>` iframe sits at `zIndex:2` and receives the actual click, preserving the `cr.credential` JWT ID token sent to `POST /auth/google { idToken: cr.credential }`. Do NOT use `overflow:hidden` on the wrapper and do NOT set opacity to `0` — both break click passthrough on production (deployed domain). The glass button has `backdrop-filter: blur(12px)`, Google logo SVG inline, hover lift effect.
+
+**Light mode login card:** The login card background is always dark (`rgba(255,255,255,0.06)`) even in light mode — `[data-theme="light"] .login-root { background: #0d0f14 }`. Global theme.css sets `color: inherit` on all elements in light mode which would darken the card's white text. Fix: explicit `!important` color overrides on `.login-card` scoped selectors for `.f-label`, `.f-input`, `.or-divider span`, `.link-btn-sm`, `.pw-toggle`, `.btn-google`, and heading/paragraph elements — all forced back to their original white/rgba-white values.
 
 **Left panel contrast:** `.login-subline` uses `rgba(255,255,255,0.88)` (not text-secondary). Feature pills use `rgba(255,255,255,0.1)` background, `rgba(255,255,255,0.2)` border, and `rgba(255,255,255,0.88)` text at 14px — readable against the animated gradient/blob background.
 
-**Button radius consistency:** `.btn-primary`, `.btn-glass`, `.f-input` all use `var(--radius-md)` (10px). `.google-wrap` has `border-radius: var(--radius-md); overflow: hidden` to clip the Google iframe to the same radius.
+**Button radius consistency:** `.btn-primary`, `.btn-glass`, `.btn-google`, `.f-input` all use `var(--radius-md)` (10px).
 
 **Password label row:** `.f-label-row` uses `flex, justify-content: space-between, gap: 8px, flex-wrap: nowrap`. `.link-btn` has `white-space: nowrap; flex-shrink: 0` so "Forgot password?" never wraps.
 
@@ -139,7 +143,7 @@ The old left sidebar is replaced by a floating pill top nav. The file still expo
 
 **ProfileDropdown:** glass panel `rgba(13,15,22,0.72)` + `blur(28px)`, `border-radius:16px`. Text always hardcoded white (bg is always dark). Identity row (name/email/role badge) + Settings + Security + divider + Sign out danger. CRITICAL: do NOT add `overflow:hidden` to `.tn-bar` — it clips the dropdown.
 
-**AppLayout:** `paddingTop:72`, `paddingBottom: isMobile ? 56 : 0`, inner wrapper `maxWidth:1100, margin:0 auto, padding:32px 24px`. AppBackground renders fixed canvas particles + 3 blobs behind all content at z-index 0.
+**AppLayout:** `paddingTop:72`, `paddingBottom: isMobile ? 56 : 0`, inner wrapper `maxWidth:1100, margin:0 auto`. Inner wrapper padding is `isMobile ? '16px 0' : '32px 24px'` — zero horizontal padding on mobile so each page controls its own side padding and avoids double-padding that would clip content. AppBackground renders fixed canvas particles + 3 blobs behind all content at z-index 0.
 
 **Light mode nav:** Pill and drawer/dropdown are always dark — explicit `[data-theme="light"]` overrides in CSS force white text for `.tn-pill`, `.tn-wordmark`, `.tn-dd-item`, `.tn-drawer-item`.
 
