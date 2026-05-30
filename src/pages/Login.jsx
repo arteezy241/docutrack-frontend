@@ -715,7 +715,7 @@ export default function Login() {
 
             {/* Custom glass Google button — overlays the invisible GoogleLogin iframe */}
             <div style={{ position: 'relative', marginBottom: 10 }}>
-              <div style={{ position: 'absolute', inset: 0, zIndex: 2, opacity: 0, overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', inset: 0, zIndex: 2, opacity: 0.001 }}>
                 <GoogleLogin
                   onSuccess={async (cr) => {
                     if (authLoading !== null) return;
