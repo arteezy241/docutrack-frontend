@@ -343,6 +343,11 @@ const CSS = `
 }
 .google-wrap {
   display: flex; justify-content: center; margin-bottom: 10px;
+  width: 100%; overflow: hidden;
+}
+.google-wrap > div, .google-wrap iframe, .google-wrap > div > div {
+  max-width: 100% !important;
+  width: 100% !important;
 }
 .spinner-muted {
   width: 15px; height: 15px;
@@ -358,6 +363,32 @@ const CSS = `
   .card-head, .card-body, .card-foot { padding-left: 20px; padding-right: 20px; }
 }
 [data-theme="light"] .login-root { background: #0d0f14; }
+/* Login card always has a dark background — keep all text white in light mode */
+[data-theme="light"] .login-card h1,
+[data-theme="light"] .login-card h2,
+[data-theme="light"] .login-card h3,
+[data-theme="light"] .login-card p,
+[data-theme="light"] .login-card span,
+[data-theme="light"] .login-card label,
+[data-theme="light"] .login-card .f-label,
+[data-theme="light"] .login-card .pw-toggle,
+[data-theme="light"] .login-card .or-divider span,
+[data-theme="light"] .login-card .link-btn-sm,
+[data-theme="light"] .login-card .btn-glass {
+  text-shadow: none !important;
+}
+[data-theme="light"] .login-card .f-label { color: rgba(255,255,255,0.5) !important; }
+[data-theme="light"] .login-card .or-divider span { color: rgba(255,255,255,0.4) !important; }
+[data-theme="light"] .login-card .link-btn-sm { color: rgba(255,255,255,0.4) !important; }
+[data-theme="light"] .login-card .pw-toggle { color: rgba(255,255,255,0.4) !important; }
+[data-theme="light"] .login-card .btn-glass { color: rgba(255,255,255,0.8) !important; }
+[data-theme="light"] .login-card .f-input {
+  background: rgba(255,255,255,0.07) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+  color: #ffffff !important;
+}
+[data-theme="light"] .login-card .f-input::placeholder { color: rgba(255,255,255,0.35) !important; }
+[data-theme="light"] .login-brand-name { color: #ffffff !important; }
 `;
 
 function Spinner() {
@@ -686,7 +717,6 @@ export default function Login() {
                   theme="filled_blue"
                   shape="rectangular"
                   text="signin_with_google"
-                  width="356"
                 />
               </div>
             )}
